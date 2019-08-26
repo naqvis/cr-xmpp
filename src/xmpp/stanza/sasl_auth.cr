@@ -126,7 +126,7 @@ module XMPP::Stanza
   # Session (Obsolete)
   # Session is both a stream feature and an obsolete IQ Payload, used to bind a
   # resource to the current XMPP stream on RFC 3121 only XMPP servers.
-  # Session is obsolete in RFC 6121. It is added to Fluux XMPP for compliance
+  # Session is obsolete in RFC 6121. It is added to cr-xmpp for compliance
   # with RFC 3121.
   # Reference: https://xmpp.org/rfcs/rfc3921.html#session
   #
