@@ -58,7 +58,7 @@ You can basically do everything you want with `cr-xmpp`. It fully supports XMPP 
    ```yaml
    dependencies:
      cr-xmpp:
-       github: your-github-user/cr-xmpp
+       github: naqvis/cr-xmpp
    ```
 
 2. Run `shards install`
