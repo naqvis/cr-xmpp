@@ -42,12 +42,27 @@ module XMPP
       end
       @stream_logger = StreamLogger.new(io, config.log_file)
       @features = open config.parsed_jid.domain
-      # starttls
-      tls_conn = start_tls_if_supported io, config
-      if tls_conn.is_a?(IO::Buffered)
-        tls_conn.sync = false
+
+      ok = @features.tls_required
+      if ok && !config.tls
+        raise AuthenticationError.new "Server requires TLS session. Ensure you either 'tls' attribute of config to 'true'"
       end
-      raise "failed to negotiate TLS session" unless @tls_enabled && config.allow_insecure
+
+      _, ok = @features.does_start_tls
+      if config.tls && !ok
+        raise AuthenticationError.new "You requested TLS session, but Server doesn't support TLS"
+      end
+
+      # starttls
+      if ok && config.tls
+        tls_conn = start_tls_if_supported io, config
+        if tls_conn.is_a?(IO::Buffered)
+          tls_conn.sync = false
+        end
+        raise AuthenticationError.new "Failed to negotiate TLS session" unless @tls_enabled
+      else
+        tls_conn = io
+      end
       reset(io, tls_conn, config) if @tls_enabled
 
       # auth
@@ -128,12 +143,12 @@ module XMPP
         begin
           Stanza::TLSProceed.new read_resp
         rescue ex
-          raise "expecting starttls proceed: #{ex.message}"
+          raise AuthenticationError.new "expecting starttls proceed: #{ex.message}"
         end
         # Conert existing connection to TLS
         context = OpenSSL::SSL::Context::Client.new
 
-        context.verify_mode = OpenSSL::SSL::VerifyMode::None if o.allow_insecure
+        context.verify_mode = OpenSSL::SSL::VerifyMode::None if o.skip_cert_verify
         begin
           tls_conn = OpenSSL::SSL::Socket::Client.new(socket, context)
           tls_conn.sync = true
@@ -147,14 +162,16 @@ module XMPP
         return tls_conn
       end
       # If we do not allow cleartext connections, make it explicit that server do not support starttls
-      raise "XMPP server does not advertise support for starttls" unless o.allow_insecure
+      raise AuthenticationError.new "XMPP server does not advertise support for starttls" if o.tls
 
       # starttls is not supported => we do not upgrade the connection
       socket
     end
 
     private def auth(o)
-      Auth.auth_sasl @stream_logger, @features, o.parsed_jid.node, o.password
+      auth = AuthHandler.new(@stream_logger, @features, o.password, o.parsed_jid)
+      auth.authenticate o.sasl_auth_order
+      # Auth.auth_sasl @stream_logger, @features, o.password, o.parsed_jid
     end
 
     private def resume(o)

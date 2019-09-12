@@ -92,12 +92,6 @@ module XMPP
       iq.make_error err
       s.send iq
     end
-
-    # HandleFunc registers a new route with a matcher for for a given packet name (iq, message, presence)
-    # See Route.Path() and Route.Callback().
-    # def handler_func(name : String, &handler : Callback)
-    #   route.packet(name).handler_func(handler)
-    # end
   end
 
   class Route

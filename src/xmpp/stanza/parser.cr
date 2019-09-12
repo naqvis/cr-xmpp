@@ -57,8 +57,10 @@ module XMPP::Stanza
     # decode_sasl decodes a packet related to SASL authentication
     def decode_sasl(node : XML::Node)
       case node.name
-      when "success" then SASLSuccess.new node
-      when "failure" then SASLFailure.new node
+      when "challenge" then SASLChallenge.new node
+      when "response"  then SASLResponse.new node
+      when "success"   then SASLSuccess.new node
+      when "failure"   then SASLFailure.new node
       else
         raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
       end

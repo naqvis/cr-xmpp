@@ -66,6 +66,9 @@ module XMPP
         @metrics.reset
         begin
           @client.resume(state)
+        rescue ex : AuthenticationError
+          Logger.error ex.message
+          raise ex
         rescue ex
           # Add some delay to avoid hammering server
           attemps += 1

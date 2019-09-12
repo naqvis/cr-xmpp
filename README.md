@@ -72,7 +72,12 @@ config = XMPP::Config.new(
   host: "localhost",
   jid: "test@localhost",
   password: "test",
-  log_file: STDOUT   # Capture all out-going and in-coming messages
+  log_file: STDOUT,   # Capture all out-going and in-coming messages
+  # Order of SASL Authentication Mechanism, first matched method supported by server will be used 
+  # for authentication. Below is default order that will be used if `sasl_auth_order` param is not set.
+  sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512, XMPP::AuthMechanism::SCRAM_SHA_256, 
+                    XMPP::AuthMechanism::SCRAM_SHA_1, XMPP::AuthMechanism::DIGEST_MD5, 
+                    XMPP::AuthMechanism::PLAIN, XMPP::AuthMechanism::ANONYMOUS]
 
 router = XMPP::Router.new
 

@@ -3,6 +3,31 @@ require "../stanza"
 module XMPP::Stanza
   # Generic / unknown content
 
+  class Nodes
+    getter nodes : Array(Node) = Array(Node).new
+
+    def self.new(node : XML::NodeSet)
+      pr = new()
+      node.select(&.element?).each do |child|
+        pr.nodes << Node.new child
+      end
+      pr
+    end
+
+    def to_xml
+      val = XML.build(quote_char: '\'') do |xml|
+        to_xml xml
+      end
+      val.sub(%(<?xml version='1.0'?>), "").lstrip("\n")
+    end
+
+    def to_xml(elem : XML::Builder)
+      elem.element("xml") do
+        @nodes.each { |n| n.to_xml elem }
+      end
+    end
+  end
+
   # Node is a generic structure to represent XML data. It is used to parse
   # unreferenced or custom stanza payload.
 

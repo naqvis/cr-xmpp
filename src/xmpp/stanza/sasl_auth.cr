@@ -5,9 +5,10 @@ module XMPP::Stanza
   # SASLAuth implements SASL Authentication initiation.
   # Reference: https://tools.ietf.org/html/rfc6120#section-6.4.2
   class SASLAuth
+    include Packet
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl auth")
     property mechanism : String = ""
-    property value : Node? = nil
+    property body : String = ""
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
@@ -17,11 +18,11 @@ module XMPP::Stanza
         when "mechanism" then cls.mechanism = attr.children[0].content
         end
       end
-      node.children.select(&.element?).each do |child|
-        cls.value = Node.new child
-        break
-      end
+      cls.body = node.text
       cls
+    end
+
+    def initialize(@mechanism = "", @body = "")
     end
 
     def to_xml(elem : XML::Builder)
@@ -30,8 +31,12 @@ module XMPP::Stanza
       dict["mechanism"] = mechanism unless mechanism.blank?
 
       elem.element(@@xml_name.local, dict) do
-        value.try &.to_xml elem
+        elem.text body unless body.blank?
       end
+    end
+
+    def name
+      "sasl:auth"
     end
   end
 
@@ -41,15 +46,18 @@ module XMPP::Stanza
   class SASLSuccess
     include Packet
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl", "success")
+    property body : String = ""
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
                                                                              (node.name == @@xml_name.local)
-      new()
+      cls = new()
+      cls.body = node.text
+      cls
     end
 
     def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space)
+      elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
     end
 
     def name
@@ -61,15 +69,22 @@ module XMPP::Stanza
   class SASLFailure
     include Packet
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl failure")
-    property any : Node? = nil # error reason is a subelement
+    property type : String = ""
+    property reason : String = ""
+    property any : Nodes? = nil # error reason is a subelement
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
-        cls.any = Node.new child
-        break
+        case child.name
+        when "text"
+          cls.reason = child.content
+        else
+          cls.type = child.name
+        end
       end
+      cls.any = Nodes.new node.children
       cls
     end
 
@@ -81,6 +96,55 @@ module XMPP::Stanza
 
     def name
       "sasl:failure"
+    end
+  end
+
+  # SASL Challenge
+  class SASLChallenge
+    include Packet
+    class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl", "challenge")
+    property body : String = ""
+
+    def self.new(node : XML::Node)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                             (node.name == @@xml_name.local)
+      cls = new()
+      cls.body = node.text
+      cls
+    end
+
+    def to_xml(elem : XML::Builder)
+      elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
+    end
+
+    def name
+      "sasl:challenge"
+    end
+  end
+
+  # SASL Response
+  class SASLResponse
+    include Packet
+    class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl", "response")
+    property body : String = ""
+
+    def self.new(node : XML::Node)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                             (node.name == @@xml_name.local)
+      new(node.text)
+    end
+
+    def initialize(@body = "")
+    end
+
+    def to_xml(elem : XML::Builder)
+      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        elem.text body unless body.blank?
+      end
+    end
+
+    def name
+      "sasl:response"
     end
   end
 
