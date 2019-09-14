@@ -54,7 +54,9 @@ module XMPP
     end
 
     private def hash_func(algorithm)
-      if algorithm.sha256?
+      if algorithm.sha512?
+        f = "SHA512"
+      elsif algorithm.sha256?
         f = "SHA256"
       else
         f = "SHA1"
@@ -106,7 +108,6 @@ module XMPP
       end
       if (salt = res["s"]?)
         raise "Server sent empty salt" if salt.blank?
-        # res["s"] = Base64.decode_string(salt)
       else
         raise "Server didn't sent salt"
       end

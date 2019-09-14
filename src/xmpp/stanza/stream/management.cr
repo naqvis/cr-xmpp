@@ -18,7 +18,6 @@ module XMPP::Stanza
   end
 
   abstract class SMFeature < Extension
-    # include Packet
   end
 
   module SMFeatureHandler

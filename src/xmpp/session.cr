@@ -171,7 +171,6 @@ module XMPP
     private def auth(o)
       auth = AuthHandler.new(@stream_logger, @features, o.password, o.parsed_jid)
       auth.authenticate o.sasl_auth_order
-      # Auth.auth_sasl @stream_logger, @features, o.password, o.parsed_jid
     end
 
     private def resume(o)

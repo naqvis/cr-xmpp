@@ -58,7 +58,6 @@ module XMPP
           Logger.info "Retrying read #{retries} time"
           sleep 1
           next
-          # raise ex
         end
         break
       end

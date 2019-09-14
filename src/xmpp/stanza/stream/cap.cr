@@ -3,8 +3,8 @@ require "../../stanza"
 module XMPP::Stanza
   # Capabilities
   # Reference: https://xmpp.org/extensions/xep-0115.html#stream
-  #    "A server MAY include its entity capabilities in a stream feature element so that connecting clients
-  #     and peer servers do not need to send service discovery requests each time they connect."
+  # "A server MAY include its entity capabilities in a stream feature element so that connecting clients
+  # and peer servers do not need to send service discovery requests each time they connect."
   # This is not a stream feature but a way to let client cache server disco info.
   class Caps < PresExtension
     class_getter xml_name : XMLName = XMLName.new("http://jabber.org/protocol/caps c")

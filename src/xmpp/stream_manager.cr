@@ -36,7 +36,6 @@ module XMPP
     # to an unrecoverable exception
     def run : Nil
       @client.event_handler = ->event_handler(Event)
-      # @client.event_handler = ->(e : Event) { event_handler e }
       @wg.add(1)
       begin
         connect
@@ -86,7 +85,7 @@ module XMPP
 
     private def event_handler(e : Event)
       case e.state
-      # when ConnectionState::Connected          then @metrics.set_connect_time
+      # when ConnectionState::Connected then update_connect_time # @metrics.set_connect_time
       # when ConnectionState::SessionEstablished then @metrics.set_login_time
       when ConnectionState::Disconnected
         # Reconnect on disconnection

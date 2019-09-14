@@ -47,7 +47,6 @@ module XMPP
       update_state ConnectionState::Connected
       @socket = socket
       # Client is ok, we now open XMPP session
-
       @session = Session.new(socket, @config, state)
       update_state ConnectionState::SessionEstablished
       @supports_ping = @session.supports_ping
@@ -113,7 +112,6 @@ module XMPP
           keepalive_quit.send("read_resp failed - #{ex.message}")
           disconnected(state)
           Logger.error ex
-          # raise ex
           return
         end
         # Handle stream errors
@@ -150,7 +148,7 @@ module XMPP
       ticker = Ticker.new(30)
       ticker.start
       loop do
-        index, val = Channel.select(ticker.receive_select_action,
+        index, _ = Channel.select(ticker.receive_select_action,
           quit.receive_select_action)
         case index
         when 0
@@ -177,7 +175,6 @@ module XMPP
             break
           end
         when 1
-          puts val
           break
         end
       end

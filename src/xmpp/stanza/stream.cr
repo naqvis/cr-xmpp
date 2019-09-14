@@ -77,7 +77,7 @@ module XMPP::Stanza
 
     def does_start_tls
       if (t = start_tls)
-        return {t, true} # if t.required
+        return {t, true}
       end
       {TLSStartTLS.new, false}
     end
