@@ -35,7 +35,7 @@ module XMPP::Stanza
       end
     end
 
-    def name
+    def name : String
       "sasl:auth"
     end
   end
@@ -60,7 +60,7 @@ module XMPP::Stanza
       elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
     end
 
-    def name
+    def name : String
       "sasl:success"
     end
   end
@@ -94,7 +94,7 @@ module XMPP::Stanza
       end
     end
 
-    def name
+    def name : String
       "sasl:failure"
     end
   end
@@ -117,7 +117,7 @@ module XMPP::Stanza
       elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
     end
 
-    def name
+    def name : String
       "sasl:challenge"
     end
   end
@@ -143,7 +143,7 @@ module XMPP::Stanza
       end
     end
 
-    def name
+    def name : String
       "sasl:response"
     end
   end

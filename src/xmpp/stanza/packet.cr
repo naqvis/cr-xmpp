@@ -7,9 +7,9 @@ module XMPP::Stanza
 
   module Packet
     abstract def name : String
-    abstract def to_xml(xml : XML::Builder) : String
+    abstract def to_xml(xml : XML::Builder)
 
-    def to_xml
+    def to_xml : String
       val = XML.build(indent: "  ", quote_char: '"') do |xml|
         to_xml xml
       end

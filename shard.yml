@@ -1,11 +1,11 @@
 name: cr-xmpp
-version: 0.1.0
+version: 0.1.1
 description: |
  XMPP/Jabber Library for Crystal focusing on simplicity, simple automation, and IoT.
  
 authors:
   - Ali Naqvi <syed.alinaqvi@gmail.com>
 
-crystal: 0.30.1
+crystal: 0.31.1
 
 license: MIT

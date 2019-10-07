@@ -21,7 +21,7 @@ module XMPP::Stanza
       elem.element(@@xml_name.local, xmlns: @@xml_name.space)
     end
 
-    def name
+    def name : String
       @@xml_name.local
     end
   end

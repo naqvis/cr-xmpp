@@ -30,7 +30,7 @@ module XMPP::Stanza
       end
     end
 
-    def name
+    def name : String
       "component:handshake"
     end
   end
@@ -73,7 +73,7 @@ module XMPP::Stanza
       end
     end
 
-    def namespace
+    def namespace : String
       xml_name.space
     end
 
