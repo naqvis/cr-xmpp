@@ -133,7 +133,12 @@ module XMPP
       # Set xml decoder and extract streamID from reply
       node = read_resp
       @stream_id, @xmlns = (Stanza::Parser.init_stream node)
-      Stanza::StreamFeatures.new read_resp # node.children[0]
+      child = if node.children.size > 0
+                node.children[0]
+              else
+                read_resp
+              end
+      Stanza::StreamFeatures.new child # read_resp # node.children[0]
     end
 
     private def start_tls_if_supported(socket, o)

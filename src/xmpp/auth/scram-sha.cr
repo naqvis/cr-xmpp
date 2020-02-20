@@ -26,8 +26,11 @@ module XMPP
       if val.is_a?(Stanza::SASLChallenge)
         body = val.as(Stanza::SASLChallenge).body
         server_resp = Base64.decode_string(body)
+        puts "Server Respnose: #{server_resp}"
         challenge = parse_scram_challenge(body, nonce)
+        puts "algorithm: #{algorithm}, challenge: #{challenge}"
         resp, server_sig = scram_response(msg, server_resp, challenge, algorithm)
+
 
         send Stanza::SASLResponse.new(resp)
         val = Stanza::Parser.next_packet read_resp
@@ -68,6 +71,7 @@ module XMPP
       bare_msg = "c=biws,r=#{challenge["r"]}"
       server_salt = Base64.decode(challenge["s"])
       hasher = hash_func(algorithm)
+      puts "key_size: #{hasher.digest_size},   server_salt: #{server_salt}"
       salted_pwd = OpenSSL::PKCS5.pbkdf2_hmac(secret: @password, salt: server_salt, iterations: challenge["i"].to_i32,
         algorithm: algorithm, key_size: hasher.digest_size)
       client_key = OpenSSL::HMAC.digest(algorithm: algorithm, key: salted_pwd, data: "Client Key")
