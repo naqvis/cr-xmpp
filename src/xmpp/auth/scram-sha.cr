@@ -31,7 +31,6 @@ module XMPP
         puts "algorithm: #{algorithm}, challenge: #{challenge}"
         resp, server_sig = scram_response(msg, server_resp, challenge, algorithm)
 
-
         send Stanza::SASLResponse.new(resp)
         val = Stanza::Parser.next_packet read_resp
         if val.is_a?(Stanza::SASLSuccess)
