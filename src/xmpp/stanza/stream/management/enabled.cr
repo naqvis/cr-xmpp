@@ -21,6 +21,8 @@ module XMPP::Stanza
         when "location" then cls.location = attr.children[0].content
         when "resume"   then cls.resume = attr.children[0].content
         when "max"      then cls.max = attr.children[0].content.to_u32
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

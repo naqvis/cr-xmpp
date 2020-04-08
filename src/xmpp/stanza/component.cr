@@ -61,6 +61,8 @@ module XMPP::Stanza
             cls.delegated = Delegated.new(child)
           rescue
           end
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls
@@ -92,6 +94,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "namespace" then cls.namespace = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

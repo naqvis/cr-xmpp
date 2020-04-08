@@ -22,6 +22,8 @@ module XMPP::Stanza
         when "node" then cls.node = attr.children[0].content
         when "ver"  then cls.ver = attr.children[0].content
         when "ext"  then cls.ext = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

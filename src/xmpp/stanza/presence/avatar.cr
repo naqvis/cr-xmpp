@@ -14,6 +14,8 @@ module XMPP::Stanza
       node.children.select(&.element?).each do |child|
         case child.name
         when "photo" then cls.photo = child.content.to_slice
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

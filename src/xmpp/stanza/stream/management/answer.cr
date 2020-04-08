@@ -15,6 +15,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "h" then cls.h = attr.children[0].content.to_u32
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

@@ -19,6 +19,8 @@ module XMPP::Stanza
         when "name"    then pr.name = child.content
         when "version" then pr.version = child.content
         when "os"      then pr.os = child.content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr

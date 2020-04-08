@@ -25,6 +25,8 @@ module XMPP::Stanza
         when "title"  then pr.title = child.content
         when "track"  then pr.track = child.content
         when "uri"    then pr.uri = child.content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr

@@ -13,6 +13,8 @@ module XMPP::Stanza
       node.children.select(&.element?).each do |child|
         case child.name
         when "mechanism" then cls.mechanism << child.content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

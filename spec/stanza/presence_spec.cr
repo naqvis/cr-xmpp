@@ -58,6 +58,8 @@ module XMPP::Stanza
         when "show"     then cls.show = child.content
         when "status"   then cls.status = child.content
         when "priority" then cls.priority = child.content.to_i8
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

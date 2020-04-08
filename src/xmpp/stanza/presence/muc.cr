@@ -16,6 +16,8 @@ module XMPP::Stanza
         case child.name
         when "password" then cls.password = child.content
         when "history"  then cls.history = History.new(child)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls
@@ -52,6 +54,8 @@ module XMPP::Stanza
         when "maxstanzas" then cls.max_stanzas = attr.children[0].content.to_i32
         when "seconds"    then cls.seconds = attr.children[0].content.to_i32
         when "since"      then cls.since = DATE_TIME_FORMAT.parse(attr.children[0].content)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

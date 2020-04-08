@@ -37,6 +37,8 @@ module XMPP::Stanza
         case attr.name
         when "code" then pr.code = attr.children[0].content.to_i32
         when "type" then pr.type = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|

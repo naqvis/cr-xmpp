@@ -30,6 +30,8 @@ module XMPP::Stanza
         case child.name
         when "publish" then pr.publish = Publish.new(child)
         when "retract" then pr.retract = Retract.new(child)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr
@@ -63,6 +65,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "node" then pr.node = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|
@@ -100,12 +104,16 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "id" then pr.id = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|
         case child.name
         when "tune" then pr.tune = Tune.new(child)
         when "mood" then pr.mood = Mood.new(child)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr
@@ -141,6 +149,8 @@ module XMPP::Stanza
         case attr.name
         when "node"   then pr.node = attr.children[0].content
         when "notify" then pr.notify = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|

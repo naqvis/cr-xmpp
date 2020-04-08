@@ -18,6 +18,8 @@ module XMPP::Stanza
         case child.name
         when "url"  then pr.url = child.content
         when "desc" then pr.desc = child.content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr

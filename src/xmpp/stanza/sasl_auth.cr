@@ -165,6 +165,8 @@ module XMPP::Stanza
         case child.name
         when "resource" then cls.resource = child.content
         when "jid"      then cls.jid = child.content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls
@@ -210,6 +212,8 @@ module XMPP::Stanza
       node.children.select(&.element?).each do |child|
         case child.name
         when "optional" then cls.optional = true
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

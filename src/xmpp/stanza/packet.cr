@@ -84,6 +84,8 @@ module XMPP::Stanza
         when "from" then @from = attr.children[0].content
         when "to"   then @to = attr.children[0].content
         when "lang" then @lang = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
     end

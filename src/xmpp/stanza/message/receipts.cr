@@ -39,6 +39,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "id" then pr.id = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr

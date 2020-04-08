@@ -16,6 +16,8 @@ module XMPP::Stanza
       node.children.select(&.element?).each do |child|
         case child.name
         when "required" then cls.required = true
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

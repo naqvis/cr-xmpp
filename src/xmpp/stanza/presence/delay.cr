@@ -17,6 +17,8 @@ module XMPP::Stanza
         case attr.name
         when "from"  then cls.from = attr.children[0].content
         when "stamp" then cls.stamp = DELAY_DATE_TIME_FORMAT.parse(attr.children[0].content)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

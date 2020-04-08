@@ -14,11 +14,15 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "lang" then pr.lang = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|
         case child.name
         when "body" then pr.body = HTMLBody.new(child)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr

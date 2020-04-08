@@ -19,12 +19,16 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "node" then cls.node = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|
         case child.name
         when "identity" then cls.identity << Identity.new(child)
         when "feature"  then cls.features << Feature.new(child)
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls
@@ -93,6 +97,8 @@ module XMPP::Stanza
         when "name"     then cls.name = attr.children[0].content
         when "category" then cls.category = attr.children[0].content
         when "type"     then cls.type = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls
@@ -119,6 +125,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "var" then cls.var = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       cls

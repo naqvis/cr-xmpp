@@ -17,6 +17,8 @@ module XMPP::Stanza
       node.attributes.each do |attr|
         case attr.name
         when "lang" then pr.lang = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       node.children.select(&.element?).each do |child|
@@ -55,6 +57,8 @@ module XMPP::Stanza
         case attr.name
         when "name"  then pr.name = attr.children[0].content
         when "value" then pr.value = attr.children[0].content
+        else
+          # shouldn't be the case, but for any changes just ignore it.
         end
       end
       pr
