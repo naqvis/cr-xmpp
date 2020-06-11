@@ -17,4 +17,3 @@ module XMPP::Logger
       end
   {% end %}
 end
-
