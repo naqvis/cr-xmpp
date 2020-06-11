@@ -21,7 +21,7 @@ module XMPP
       n
     end
 
-    def write(slice : Bytes) : Nil
+    def write(slice : Bytes) : Int64
       @socket.write slice
       @socket.flush
       if (sp = @log_file)
@@ -29,6 +29,7 @@ module XMPP
         sp << String.new(slice)
         sp << "\n\n" # Separator
       end
+      slice.size.to_i64
     end
 
     private def do_read(bytes : Slice)
