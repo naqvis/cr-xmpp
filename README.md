@@ -1,10 +1,9 @@
-[![Build Status](https://travis-ci.org/naqvis/cr-xmpp.svg?branch=master)](https://travis-ci.org/naqvis/cr-xmpp)
+# Crystal XMPP
+![CI](https://github.com/naqvis/cr-xmpp/workflows/CI/badge.svg)
 [![GitHub release](https://img.shields.io/github/release/naqvis/cr-xmpp.svg)](https://github.com/naqvis/cr-xmpp/releases)
 [![Docs](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://naqvis.github.io/cr-xmpp/)
 
-# Crystal XMPP
-
-**Pure Crystal** XMPP Shard, focusing on simplicity, simple automation, and IoT.  
+**Pure Crystal** XMPP Shard, focusing on simplicity, simple automation, and IoT.
 
 The goal is to make simple to write simple XMPP clients and components. It features:
 
@@ -50,7 +49,7 @@ You can basically do everything you want with `cr-xmpp`. It fully supports XMPP 
   - [XEP-0203 - Delayed Delivery](http://www.xmpp.org/extensions/xep-0203.html)
   - [XEP-0333 - Chat Markers](https://xmpp.org/extensions/xep-0333.html)
   - [XEP-0334 - Message Processing Hints](https://xmpp.org/extensions/xep-0334.html)
-  
+
 ## Installation
 
 1. Add the dependency to your `shard.yml`:
@@ -73,10 +72,10 @@ config = XMPP::Config.new(
   jid: "test@localhost",
   password: "test",
   log_file: STDOUT,   # Capture all out-going and in-coming messages
-  # Order of SASL Authentication Mechanism, first matched method supported by server will be used 
+  # Order of SASL Authentication Mechanism, first matched method supported by server will be used
   # for authentication. Below is default order that will be used if `sasl_auth_order` param is not set.
-  sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512, XMPP::AuthMechanism::SCRAM_SHA_256, 
-                    XMPP::AuthMechanism::SCRAM_SHA_1, XMPP::AuthMechanism::DIGEST_MD5, 
+  sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512, XMPP::AuthMechanism::SCRAM_SHA_256,
+                    XMPP::AuthMechanism::SCRAM_SHA_1, XMPP::AuthMechanism::DIGEST_MD5,
                     XMPP::AuthMechanism::PLAIN, XMPP::AuthMechanism::ANONYMOUS]
 
 router = XMPP::Router.new
@@ -90,7 +89,7 @@ router.presence do |_, p|
   end
 end
 
-# router.when "chat" do |s, p| # OR 
+# router.when "chat" do |s, p| # OR
 router.message do |s, p|
   handle_message(s, p)
 end
@@ -122,7 +121,7 @@ Refer to **examples** for more usage details.
 
 ## Development
 
-XMPP stanzas are basic and extensible XML elements. Stanzas (or sometimes special stanzas called 'nonzas') are used to 
+XMPP stanzas are basic and extensible XML elements. Stanzas (or sometimes special stanzas called 'nonzas') are used to
 leverage the XMPP protocol features. During a session, a client (or a component) and a server will be exchanging stanzas
 back and forth.
 
