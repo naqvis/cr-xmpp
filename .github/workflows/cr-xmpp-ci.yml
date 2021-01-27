@@ -17,7 +17,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: install on linux
     - uses: actions/checkout@v2
     - name: Install Crystal
       uses: oprypin/install-crystal@v1.3.0
