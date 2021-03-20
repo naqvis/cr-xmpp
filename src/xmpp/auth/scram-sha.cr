@@ -77,7 +77,7 @@ module XMPP
 
       # stored_key = OpenSSL::SHA1.hash(client_key.to_unsafe, LibC::SizeT.new(client_key.bytesize))
       hasher.update(client_key)
-      stored_key = hasher.digest
+      stored_key = hasher.final
 
       auth_msg = "#{initial_msg},#{server_resp},#{bare_msg}"
       client_sig = OpenSSL::HMAC.digest(algorithm: algorithm, key: stored_key, data: auth_msg)
