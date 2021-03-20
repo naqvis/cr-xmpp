@@ -77,6 +77,7 @@ config = XMPP::Config.new(
   sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512, XMPP::AuthMechanism::SCRAM_SHA_256,
                     XMPP::AuthMechanism::SCRAM_SHA_1, XMPP::AuthMechanism::DIGEST_MD5,
                     XMPP::AuthMechanism::PLAIN, XMPP::AuthMechanism::ANONYMOUS]
+)
 
 router = XMPP::Router.new
 
