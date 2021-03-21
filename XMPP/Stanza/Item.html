@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="generator" content="Crystal Docs 0.35.1">
+<meta name="crystal_docs.project_version" content="master-dev">
+<meta name="crystal_docs.project_name" content="cr-xmpp">
+
+
+
+<link href="../../css/style.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="../../js/doc.js"></script>
+
+  <meta name="repository-name" content="cr-xmpp">
+  <title>XMPP::Stanza::Item - cr-xmpp master-dev</title>
+  <script type="text/javascript">
+    CrystalDocs.base_path = "../../";
+  </script>
+</head>
+<body>
+
+<svg class="hidden">
+  <symbol id="octicon-link" viewBox="0 0 16 16">
+    <path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path>
+  </symbol>
+</svg>
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="search-box">
+      <input type="search" class="search-input" placeholder="Search..." spellcheck="false" aria-label="Search">
+    </div>
+
+    <div class="project-summary">
+      <h1 class="project-name">
+        <a href="../../index.html">
+          cr-xmpp
+        </a>
+      </h1>
+
+      <span class="project-version">
+        master-dev
+      </span>
+    </div>
+  </div>
+
+  <div class="search-results hidden">
+    <ul class="search-list"></ul>
+  </div>
+
+  <div class="types-list">
+    <ul>
+  
+  <li class="parent open current" data-id="cr-xmpp/XMPP" data-name="xmpp">
+      <a href="../../XMPP.html">XMPP</a>
+      
+        <ul>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/AuthenticationError" data-name="xmpp::authenticationerror">
+      <a href="../../XMPP/AuthenticationError.html">AuthenticationError</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/AuthMechanism" data-name="xmpp::authmechanism">
+      <a href="../../XMPP/AuthMechanism.html">AuthMechanism</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Callback" data-name="xmpp::callback">
+      <a href="../../XMPP/Callback.html">Callback</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Client" data-name="xmpp::client">
+      <a href="../../XMPP/Client.html">Client</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Component" data-name="xmpp::component">
+      <a href="../../XMPP/Component.html">Component</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/ComponentOptions" data-name="xmpp::componentoptions">
+      <a href="../../XMPP/ComponentOptions.html">ComponentOptions</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Config" data-name="xmpp::config">
+      <a href="../../XMPP/Config.html">Config</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/ConnectionClosed" data-name="xmpp::connectionclosed">
+      <a href="../../XMPP/ConnectionClosed.html">ConnectionClosed</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/ConnectionState" data-name="xmpp::connectionstate">
+      <a href="../../XMPP/ConnectionState.html">ConnectionState</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Event" data-name="xmpp::event">
+      <a href="../../XMPP/Event.html">Event</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/EventHandler" data-name="xmpp::eventhandler">
+      <a href="../../XMPP/EventHandler.html">EventHandler</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/EventManager" data-name="xmpp::eventmanager">
+      <a href="../../XMPP/EventManager.html">EventManager</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/JID" data-name="xmpp::jid">
+      <a href="../../XMPP/JID.html">JID</a>
+      
+    </li>
+  
+  <li class="parent " data-id="cr-xmpp/XMPP/Logger" data-name="xmpp::logger">
+      <a href="../../XMPP/Logger.html">Logger</a>
+      
+        <ul>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Logger/MyFormat" data-name="xmpp::logger::myformat">
+      <a href="../../XMPP/Logger/MyFormat.html">MyFormat</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Metrics" data-name="xmpp::metrics">
+      <a href="../../XMPP/Metrics.html">Metrics</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/PostConnect" data-name="xmpp::postconnect">
+      <a href="../../XMPP/PostConnect.html">PostConnect</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Route" data-name="xmpp::route">
+      <a href="../../XMPP/Route.html">Route</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Router" data-name="xmpp::router">
+      <a href="../../XMPP/Router.html">Router</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Sender" data-name="xmpp::sender">
+      <a href="../../XMPP/Sender.html">Sender</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Session" data-name="xmpp::session">
+      <a href="../../XMPP/Session.html">Session</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/SMState" data-name="xmpp::smstate">
+      <a href="../../XMPP/SMState.html">SMState</a>
+      
+    </li>
+  
+  <li class="parent open current" data-id="cr-xmpp/XMPP/Stanza" data-name="xmpp::stanza">
+      <a href="../../XMPP/Stanza.html">Stanza</a>
+      
+        <ul>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Attrs" data-name="xmpp::stanza::attrs">
+      <a href="../../XMPP/Stanza/Attrs.html">Attrs</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Bind" data-name="xmpp::stanza::bind">
+      <a href="../../XMPP/Stanza/Bind.html">Bind</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Caps" data-name="xmpp::stanza::caps">
+      <a href="../../XMPP/Stanza/Caps.html">Caps</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ControlField" data-name="xmpp::stanza::controlfield">
+      <a href="../../XMPP/Stanza/ControlField.html">ControlField</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ControlGetForm" data-name="xmpp::stanza::controlgetform">
+      <a href="../../XMPP/Stanza/ControlGetForm.html">ControlGetForm</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ControlSet" data-name="xmpp::stanza::controlset">
+      <a href="../../XMPP/Stanza/ControlSet.html">ControlSet</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ControlSetResponse" data-name="xmpp::stanza::controlsetresponse">
+      <a href="../../XMPP/Stanza/ControlSetResponse.html">ControlSetResponse</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/DelayMessage" data-name="xmpp::stanza::delaymessage">
+      <a href="../../XMPP/Stanza/DelayMessage.html">DelayMessage</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/DelayPresence" data-name="xmpp::stanza::delaypresence">
+      <a href="../../XMPP/Stanza/DelayPresence.html">DelayPresence</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Delegated" data-name="xmpp::stanza::delegated">
+      <a href="../../XMPP/Stanza/Delegated.html">Delegated</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Delegation" data-name="xmpp::stanza::delegation">
+      <a href="../../XMPP/Stanza/Delegation.html">Delegation</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/DiscoInfo" data-name="xmpp::stanza::discoinfo">
+      <a href="../../XMPP/Stanza/DiscoInfo.html">DiscoInfo</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/DiscoItem" data-name="xmpp::stanza::discoitem">
+      <a href="../../XMPP/Stanza/DiscoItem.html">DiscoItem</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/DiscoItems" data-name="xmpp::stanza::discoitems">
+      <a href="../../XMPP/Stanza/DiscoItems.html">DiscoItems</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Error" data-name="xmpp::stanza::error">
+      <a href="../../XMPP/Stanza/Error.html">Error</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Extension" data-name="xmpp::stanza::extension">
+      <a href="../../XMPP/Stanza/Extension.html">Extension</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Feature" data-name="xmpp::stanza::feature">
+      <a href="../../XMPP/Stanza/Feature.html">Feature</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Forwarded" data-name="xmpp::stanza::forwarded">
+      <a href="../../XMPP/Stanza/Forwarded.html">Forwarded</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Handshake" data-name="xmpp::stanza::handshake">
+      <a href="../../XMPP/Stanza/Handshake.html">Handshake</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/History" data-name="xmpp::stanza::history">
+      <a href="../../XMPP/Stanza/History.html">History</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/HTML" data-name="xmpp::stanza::html">
+      <a href="../../XMPP/Stanza/HTML.html">HTML</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/HTMLBody" data-name="xmpp::stanza::htmlbody">
+      <a href="../../XMPP/Stanza/HTMLBody.html">HTMLBody</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Identity" data-name="xmpp::stanza::identity">
+      <a href="../../XMPP/Stanza/Identity.html">Identity</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/IQ" data-name="xmpp::stanza::iq">
+      <a href="../../XMPP/Stanza/IQ.html">IQ</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/IQPayload" data-name="xmpp::stanza::iqpayload">
+      <a href="../../XMPP/Stanza/IQPayload.html">IQPayload</a>
+      
+    </li>
+  
+  <li class=" current" data-id="cr-xmpp/XMPP/Stanza/Item" data-name="xmpp::stanza::item">
+      <a href="../../XMPP/Stanza/Item.html">Item</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Markable" data-name="xmpp::stanza::markable">
+      <a href="../../XMPP/Stanza/Markable.html">Markable</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/MarkAcknowledged" data-name="xmpp::stanza::markacknowledged">
+      <a href="../../XMPP/Stanza/MarkAcknowledged.html">MarkAcknowledged</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/MarkDisplayed" data-name="xmpp::stanza::markdisplayed">
+      <a href="../../XMPP/Stanza/MarkDisplayed.html">MarkDisplayed</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/MarkReceived" data-name="xmpp::stanza::markreceived">
+      <a href="../../XMPP/Stanza/MarkReceived.html">MarkReceived</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Message" data-name="xmpp::stanza::message">
+      <a href="../../XMPP/Stanza/Message.html">Message</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Mood" data-name="xmpp::stanza::mood">
+      <a href="../../XMPP/Stanza/Mood.html">Mood</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/MsgExtension" data-name="xmpp::stanza::msgextension">
+      <a href="../../XMPP/Stanza/MsgExtension.html">MsgExtension</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/MucPresence" data-name="xmpp::stanza::mucpresence">
+      <a href="../../XMPP/Stanza/MucPresence.html">MucPresence</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/NoCopyHint" data-name="xmpp::stanza::nocopyhint">
+      <a href="../../XMPP/Stanza/NoCopyHint.html">NoCopyHint</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Node" data-name="xmpp::stanza::node">
+      <a href="../../XMPP/Stanza/Node.html">Node</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Nodes" data-name="xmpp::stanza::nodes">
+      <a href="../../XMPP/Stanza/Nodes.html">Nodes</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/NoPermanentStoreHint" data-name="xmpp::stanza::nopermanentstorehint">
+      <a href="../../XMPP/Stanza/NoPermanentStoreHint.html">NoPermanentStoreHint</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/NoStoreHint" data-name="xmpp::stanza::nostorehint">
+      <a href="../../XMPP/Stanza/NoStoreHint.html">NoStoreHint</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/OOB" data-name="xmpp::stanza::oob">
+      <a href="../../XMPP/Stanza/OOB.html">OOB</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Packet" data-name="xmpp::stanza::packet">
+      <a href="../../XMPP/Stanza/Packet.html">Packet</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/PacketType" data-name="xmpp::stanza::packettype">
+      <a href="../../XMPP/Stanza/PacketType.html">PacketType</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Parser" data-name="xmpp::stanza::parser">
+      <a href="../../XMPP/Stanza/Parser.html">Parser</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Ping" data-name="xmpp::stanza::ping">
+      <a href="../../XMPP/Stanza/Ping.html">Ping</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Presence" data-name="xmpp::stanza::presence">
+      <a href="../../XMPP/Stanza/Presence.html">Presence</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/PresExtension" data-name="xmpp::stanza::presextension">
+      <a href="../../XMPP/Stanza/PresExtension.html">PresExtension</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Publish" data-name="xmpp::stanza::publish">
+      <a href="../../XMPP/Stanza/Publish.html">Publish</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/PubSub" data-name="xmpp::stanza::pubsub">
+      <a href="../../XMPP/Stanza/PubSub.html">PubSub</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ReceiptReceived" data-name="xmpp::stanza::receiptreceived">
+      <a href="../../XMPP/Stanza/ReceiptReceived.html">ReceiptReceived</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/ReceiptRequest" data-name="xmpp::stanza::receiptrequest">
+      <a href="../../XMPP/Stanza/ReceiptRequest.html">ReceiptRequest</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Retract" data-name="xmpp::stanza::retract">
+      <a href="../../XMPP/Stanza/Retract.html">Retract</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Roster" data-name="xmpp::stanza::roster">
+      <a href="../../XMPP/Stanza/Roster.html">Roster</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/RosterItem" data-name="xmpp::stanza::rosteritem">
+      <a href="../../XMPP/Stanza/RosterItem.html">RosterItem</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SASLAuth" data-name="xmpp::stanza::saslauth">
+      <a href="../../XMPP/Stanza/SASLAuth.html">SASLAuth</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SASLChallenge" data-name="xmpp::stanza::saslchallenge">
+      <a href="../../XMPP/Stanza/SASLChallenge.html">SASLChallenge</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SASLFailure" data-name="xmpp::stanza::saslfailure">
+      <a href="../../XMPP/Stanza/SASLFailure.html">SASLFailure</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SASLResponse" data-name="xmpp::stanza::saslresponse">
+      <a href="../../XMPP/Stanza/SASLResponse.html">SASLResponse</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SASLSuccess" data-name="xmpp::stanza::saslsuccess">
+      <a href="../../XMPP/Stanza/SASLSuccess.html">SASLSuccess</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMAnswer" data-name="xmpp::stanza::smanswer">
+      <a href="../../XMPP/Stanza/SMAnswer.html">SMAnswer</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMEnabled" data-name="xmpp::stanza::smenabled">
+      <a href="../../XMPP/Stanza/SMEnabled.html">SMEnabled</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMFailed" data-name="xmpp::stanza::smfailed">
+      <a href="../../XMPP/Stanza/SMFailed.html">SMFailed</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMFeature" data-name="xmpp::stanza::smfeature">
+      <a href="../../XMPP/Stanza/SMFeature.html">SMFeature</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMFeatureHandler" data-name="xmpp::stanza::smfeaturehandler">
+      <a href="../../XMPP/Stanza/SMFeatureHandler.html">SMFeatureHandler</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMRequest" data-name="xmpp::stanza::smrequest">
+      <a href="../../XMPP/Stanza/SMRequest.html">SMRequest</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/SMResumed" data-name="xmpp::stanza::smresumed">
+      <a href="../../XMPP/Stanza/SMResumed.html">SMResumed</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StateActive" data-name="xmpp::stanza::stateactive">
+      <a href="../../XMPP/Stanza/StateActive.html">StateActive</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StateComposing" data-name="xmpp::stanza::statecomposing">
+      <a href="../../XMPP/Stanza/StateComposing.html">StateComposing</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StateGone" data-name="xmpp::stanza::stategone">
+      <a href="../../XMPP/Stanza/StateGone.html">StateGone</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StateInactive" data-name="xmpp::stanza::stateinactive">
+      <a href="../../XMPP/Stanza/StateInactive.html">StateInactive</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StatePaused" data-name="xmpp::stanza::statepaused">
+      <a href="../../XMPP/Stanza/StatePaused.html">StatePaused</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StoreHint" data-name="xmpp::stanza::storehint">
+      <a href="../../XMPP/Stanza/StoreHint.html">StoreHint</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StreamError" data-name="xmpp::stanza::streamerror">
+      <a href="../../XMPP/Stanza/StreamError.html">StreamError</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StreamFeatures" data-name="xmpp::stanza::streamfeatures">
+      <a href="../../XMPP/Stanza/StreamFeatures.html">StreamFeatures</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/StreamSession" data-name="xmpp::stanza::streamsession">
+      <a href="../../XMPP/Stanza/StreamSession.html">StreamSession</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/TLSProceed" data-name="xmpp::stanza::tlsproceed">
+      <a href="../../XMPP/Stanza/TLSProceed.html">TLSProceed</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Tune" data-name="xmpp::stanza::tune">
+      <a href="../../XMPP/Stanza/Tune.html">Tune</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/VCardPresence" data-name="xmpp::stanza::vcardpresence">
+      <a href="../../XMPP/Stanza/VCardPresence.html">VCardPresence</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/Version" data-name="xmpp::stanza::version">
+      <a href="../../XMPP/Stanza/Version.html">Version</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/Stanza/XMLName" data-name="xmpp::stanza::xmlname">
+      <a href="../../XMPP/Stanza/XMLName.html">XMLName</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/StreamClient" data-name="xmpp::streamclient">
+      <a href="../../XMPP/StreamClient.html">StreamClient</a>
+      
+    </li>
+  
+  <li class=" " data-id="cr-xmpp/XMPP/StreamManager" data-name="xmpp::streammanager">
+      <a href="../../XMPP/StreamManager.html">StreamManager</a>
+      
+    </li>
+  
+</ul>
+
+      
+    </li>
+  
+</ul>
+
+  </div>
+</div>
+
+
+<div class="main-content">
+<h1 class="type-name">
+
+  <span class="kind">class</span> XMPP::Stanza::Item
+
+</h1>
+
+
+  <ul class="superclass-hierarchy"><li class="superclass"><a href="../../XMPP/Stanza/Item.html">XMPP::Stanza::Item</a></li><li class="superclass">Reference</li><li class="superclass">Object</li></ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2>
+    <a id="defined-in" class="anchor" href="#defined-in">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Defined in:
+  </h2>
+  
+
+
+
+
+
+  <h2>
+    <a id="constructors" class="anchor" href="#constructors">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Constructors
+  </h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#new(node:XML::Node)-class-method" class="signature"><strong>.new</strong>(node : XML::Node)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>
+    <a id="class-method-summary" class="anchor" href="#class-method-summary">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Class Method Summary
+  </h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#xml_name:String-class-method" class="signature"><strong>.xml_name</strong> : String</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+  <h2>
+    <a id="instance-method-summary" class="anchor" href="#instance-method-summary">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Instance Method Summary
+  </h2>
+  <ul class="list-summary">
+    
+      <li class="entry-summary">
+        <a href="#id:String-instance-method" class="signature"><strong>#id</strong> : String</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#id=(id:String)-instance-method" class="signature"><strong>#id=</strong>(id : String)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#mood:Mood?-instance-method" class="signature"><strong>#mood</strong> : Mood?</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#mood=(mood:Mood?)-instance-method" class="signature"><strong>#mood=</strong>(mood : Mood?)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#to_xml(elem:XML::Builder)-instance-method" class="signature"><strong>#to_xml</strong>(elem : XML::Builder)</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#to_xml-instance-method" class="signature"><strong>#to_xml</strong></a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#tune:Tune?-instance-method" class="signature"><strong>#tune</strong> : Tune?</a>
+        
+      </li>
+    
+      <li class="entry-summary">
+        <a href="#tune=(tune:Tune?)-instance-method" class="signature"><strong>#tune=</strong>(tune : Tune?)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+
+
+<div class="methods-inherited">
+  
+    
+
+
+    
+
+
+    
+
+
+  
+    
+
+
+    
+
+
+    
+
+
+  
+</div>
+
+
+  <h2>
+    <a id="constructor-detail" class="anchor" href="#constructor-detail">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Constructor Detail
+  </h2>
+  
+    <div class="entry-detail" id="new(node:XML::Node)-class-method">
+      <div class="signature">
+        
+        def self.<strong>new</strong>(node : XML::Node)
+
+        <a class="method-permalink" href="#new(node:XML::Node)-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>
+    <a id="class-method-detail" class="anchor" href="#class-method-detail">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Class Method Detail
+  </h2>
+  
+    <div class="entry-detail" id="xml_name:String-class-method">
+      <div class="signature">
+        
+        def self.<strong>xml_name</strong> : String
+
+        <a class="method-permalink" href="#xml_name:String-class-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+
+
+
+  <h2>
+    <a id="instance-method-detail" class="anchor" href="#instance-method-detail">
+  <svg class="octicon-link" aria-hidden="true">
+    <use href="#octicon-link"/>
+  </svg>
+</a>
+    Instance Method Detail
+  </h2>
+  
+    <div class="entry-detail" id="id:String-instance-method">
+      <div class="signature">
+        
+        def <strong>id</strong> : String
+
+        <a class="method-permalink" href="#id:String-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="id=(id:String)-instance-method">
+      <div class="signature">
+        
+        def <strong>id=</strong>(id : String)
+
+        <a class="method-permalink" href="#id=(id:String)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="mood:Mood?-instance-method">
+      <div class="signature">
+        
+        def <strong>mood</strong> : <a href="../../XMPP/Stanza/Mood.html">Mood</a>?
+
+        <a class="method-permalink" href="#mood:Mood?-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="mood=(mood:Mood?)-instance-method">
+      <div class="signature">
+        
+        def <strong>mood=</strong>(mood : <a href="../../XMPP/Stanza/Mood.html">Mood</a>?)
+
+        <a class="method-permalink" href="#mood=(mood:Mood?)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="to_xml(elem:XML::Builder)-instance-method">
+      <div class="signature">
+        
+        def <strong>to_xml</strong>(elem : XML::Builder)
+
+        <a class="method-permalink" href="#to_xml(elem:XML::Builder)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="to_xml-instance-method">
+      <div class="signature">
+        
+        def <strong>to_xml</strong>
+
+        <a class="method-permalink" href="#to_xml-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="tune:Tune?-instance-method">
+      <div class="signature">
+        
+        def <strong>tune</strong> : <a href="../../XMPP/Stanza/Tune.html">Tune</a>?
+
+        <a class="method-permalink" href="#tune:Tune?-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+    <div class="entry-detail" id="tune=(tune:Tune?)-instance-method">
+      <div class="signature">
+        
+        def <strong>tune=</strong>(tune : <a href="../../XMPP/Stanza/Tune.html">Tune</a>?)
+
+        <a class="method-permalink" href="#tune=(tune:Tune?)-instance-method">#</a>
+      </div>
+      
+      <br/>
+      <div>
+        
+      </div>
+    </div>
+  
+
+
+
+
+</div>
+
+</body>
+</html>
