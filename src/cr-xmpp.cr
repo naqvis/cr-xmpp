@@ -1,5 +1,5 @@
 module XMPP
-  VERSION = "0.1.7"
+  VERSION = "0.1.8"
 end
 
 require "./xmpp"
