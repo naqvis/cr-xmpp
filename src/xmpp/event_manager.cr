@@ -105,22 +105,32 @@ module XMPP
   private class WaitGroup
     def initialize
       @count = Atomic(Int32).new(0)
-      @span = Time::Span.new(nanoseconds: 5000)
+      @chan = Channel(Nil).new
     end
 
     def add(n = 1)
-      @count.add n
+      return @count.get if n == 0
+      count = @count.add(n) + n # New value
+      @chan.close if count <= 0
+      count
+    end
+
+    def count
+      @count.get
     end
 
     def done
       add(-1)
     end
 
+    def done?
+      @chan.closed?
+    end
+
     def wait
-      loop do
-        return if @count.get == 0
-        sleep(@span)
-      end
+      return if @count.get == 0 # Don't block when first constructed
+      @chan.receive
+    rescue Channel::ClosedError
     end
   end
 end
