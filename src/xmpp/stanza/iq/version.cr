@@ -26,11 +26,11 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("name") { elem.text name } unless name.blank?
-        elem.element("version") { elem.text version } unless version.blank?
-        elem.element("os") { elem.text os } unless os.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("name") { xml.text name } unless name.blank?
+        xml.element("version") { xml.text version } unless version.blank?
+        xml.element("os") { xml.text os } unless os.blank?
       end
     end
 

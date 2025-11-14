@@ -15,7 +15,7 @@ module XMPP::Stanza
     def self.new(xml : String)
       doc = XML.parse(xml)
       root = doc.first_element_child
-      if (root)
+      if root
         new(root)
       else
         raise "Invalid XML"
@@ -37,10 +37,10 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        publish.try &.to_xml elem
-        retract.try &.to_xml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        publish.try &.to_xml xml
+        retract.try &.to_xml xml
       end
     end
 
@@ -82,12 +82,12 @@ module XMPP::Stanza
       end
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["node"] = node unless node.blank?
 
-      elem.element(@@xml_name, dict) do
-        item.try &.to_xml elem
+      xml.element(@@xml_name, dict) do
+        item.try &.to_xml xml
       end
     end
   end
@@ -125,13 +125,13 @@ module XMPP::Stanza
       end
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["id"] = id unless id.blank?
 
-      elem.element(@@xml_name, dict) do
-        tune.try &.to_xml elem
-        mood.try &.to_xml elem
+      xml.element(@@xml_name, dict) do
+        tune.try &.to_xml xml
+        mood.try &.to_xml xml
       end
     end
   end
@@ -166,13 +166,13 @@ module XMPP::Stanza
       end
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["node"] = node unless node.blank?
       dict["notify"] = notify unless notify.blank?
 
-      elem.element(@@xml_name, dict) do
-        item.try &.to_xml elem
+      xml.element(@@xml_name, dict) do
+        item.try &.to_xml xml
       end
     end
   end

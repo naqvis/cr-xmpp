@@ -25,10 +25,10 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("url") { elem.text url } unless url.blank?
-        elem.element("desc") { elem.text desc } unless desc.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("url") { xml.text url } unless url.blank?
+        xml.element("desc") { xml.text desc } unless desc.blank?
       end
     end
 

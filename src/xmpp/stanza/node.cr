@@ -21,9 +21,9 @@ module XMPP::Stanza
       val.sub(%(<?xml version='1.0'?>), "").lstrip("\n")
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element("xml") do
-        @nodes.each { |n| n.to_xml elem }
+    def to_xml(xml : XML::Builder)
+      xml.element("xml") do
+        @nodes.each(&.to_xml(xml))
       end
     end
   end
@@ -65,11 +65,11 @@ module XMPP::Stanza
       end
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       attrs["xmlns"] = xml_name.space unless xml_name.space.blank?
-      elem.element(xml_name.local, attrs) do
-        elem.text contents unless contents.blank?
-        nodes.each { |n| n.to_xml elem }
+      xml.element(xml_name.local, attrs) do
+        xml.text contents unless contents.blank?
+        nodes.each(&.to_xml(xml))
       end
     end
 

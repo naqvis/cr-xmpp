@@ -9,3 +9,13 @@
 /shard.lock
 .vscode
 .ameba.yml
+
+# Docker development
+docker/prosody/certs/*.key
+docker/prosody/certs/*.crt
+docker/prosody/certs/*.pem
+
+# Build artifacts
+examples/xmpp_echo
+examples/xmpp_component
+examples/xmpp_channel_binding

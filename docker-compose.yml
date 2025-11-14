@@ -1,0 +1,50 @@
+services:
+  # Prosody XMPP Server - Modern, lightweight, supports SCRAM-PLUS
+  # Note: Runs via Rosetta 2 emulation on ARM64/Apple Silicon (works but slower)
+  prosody:
+    image: prosody/prosody:latest
+    platform: linux/amd64
+    container_name: xmpp-prosody
+    ports:
+      - "5222:5222" # Client-to-Server (C2S)
+      - "5269:5269" # Server-to-Server (S2S)
+      - "5280:5280" # HTTP (BOSH/WebSocket)
+      - "5281:5281" # HTTPS (BOSH/WebSocket)
+    volumes:
+      - ./docker/prosody/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua:ro
+      - ./docker/prosody/certs:/etc/prosody/certs
+      - ./docker/prosody/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - prosody-data:/var/lib/prosody
+    environment:
+      - LOCAL=localhost
+      - DOMAIN=localhost
+    entrypoint: ["/docker-entrypoint.sh"]
+    networks:
+      - xmpp-network
+    restart: unless-stopped
+
+  # Alternative: ejabberd XMPP Server (commented out by default)
+  # ejabberd:
+  #   image: ejabberd/ecs:latest
+  #   container_name: xmpp-ejabberd
+  #   ports:
+  #     - "5222:5222"   # Client-to-Server
+  #     - "5269:5269"   # Server-to-Server
+  #     - "5280:5280"   # HTTP
+  #     - "5443:5443"   # HTTPS
+  #   volumes:
+  #     - ./docker/ejabberd/ejabberd.yml:/home/ejabberd/conf/ejabberd.yml:ro
+  #     - ejabberd-data:/home/ejabberd/database
+  #   environment:
+  #     - ERLANG_NODE=ejabberd@localhost
+  #   networks:
+  #     - xmpp-network
+  #   restart: unless-stopped
+
+volumes:
+  prosody-data:
+  # ejabberd-data:
+
+networks:
+  xmpp-network:
+    driver: bridge

@@ -5,14 +5,17 @@ module XMPP
   private class StreamLogger < IO
     getter socket : IO # Actual connection
     getter log_file : IO?
+    getter tls_socket : OpenSSL::SSL::Socket::Client?
 
     def initialize(@socket, @log_file = nil)
+      # Track TLS socket for channel binding support
+      @tls_socket = @socket.is_a?(OpenSSL::SSL::Socket::Client) ? @socket.as(OpenSSL::SSL::Socket::Client) : nil
     end
 
     def read(slice : Bytes)
       n = @socket.read(slice)
       unless n == 0
-        if (sp = @log_file)
+        if sp = @log_file
           sp << "RECV:" << "\n" # Prefix
           sp << String.new(slice[0, n])
           sp << "\n\n" # Separator
@@ -24,7 +27,7 @@ module XMPP
     def write(slice : Bytes) : Nil
       @socket.write slice
       @socket.flush
-      if (sp = @log_file)
+      if sp = @log_file
         sp << "SEND:" << "\n" # Prefix
         sp << String.new(slice)
         sp << "\n\n" # Separator

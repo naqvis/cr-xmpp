@@ -2,7 +2,6 @@ require "./spec_helper"
 
 module XMPP
   describe WaitGroup do
-
     it "Should not block on creation" do
       wg = WaitGroup.new
       wg.wait
@@ -18,7 +17,7 @@ module XMPP
       progress.get.should eq 1
       wg.done.should eq 0
       while progress.get != 2
-         sleep 1.milliseconds
+        sleep 1.milliseconds
       end
     end
 
@@ -45,6 +44,5 @@ module XMPP
       wg.add
       wg.done?.should be_true
     end
-
   end
 end

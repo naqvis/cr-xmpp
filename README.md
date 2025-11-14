@@ -1,4 +1,5 @@
 # Crystal XMPP
+
 ![CI](https://github.com/naqvis/cr-xmpp/workflows/CI/badge.svg)
 [![GitHub release](https://img.shields.io/github/release/naqvis/cr-xmpp.svg)](https://github.com/naqvis/cr-xmpp/releases)
 [![Docs](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://naqvis.github.io/cr-xmpp/)
@@ -18,7 +19,9 @@ The goal is to make simple to write simple XMPP clients and components. It featu
 
 You can basically do everything you want with `cr-xmpp`. It fully supports XMPP Client and components specification, and also a wide range of extensions (XEPs). And it's very easy to extend :)
 
-**This Shard does not have any other dependencies.**
+**Dependencies:**
+
+- `openssl_ext` - Required for channel binding support (provides extended OpenSSL functionality)
 
 ## Supported specifications
 
@@ -29,26 +32,34 @@ You can basically do everything you want with `cr-xmpp`. It fully supports XMPP 
 
 ### Components
 
-  - [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html)
-  - [XEP-0355: Namespace Delegation](https://xmpp.org/extensions/xep-0355.html)
-  - [XEP-0356: Privileged Entity](https://xmpp.org/extensions/xep-0356.html)
+- [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html)
+- [XEP-0355: Namespace Delegation](https://xmpp.org/extensions/xep-0355.html)
+- [XEP-0356: Privileged Entity](https://xmpp.org/extensions/xep-0356.html)
 
 ### XEP Extensions
 
-  - [XEP-0030 - Service Discovery](http://www.xmpp.org/extensions/xep-0030.html)
-  - [XEP-0045 - Multi-User Chat - 19.1](http://www.xmpp.org/extensions/xep-0045.html)
-  - [XEP-0060 - Publish-Subscribe](http://xmpp.org/extensions/xep-0060.html)
-  - [XEP-0066 - Out of Band Data](https://xmpp.org/extensions/xep-0066.html)
-  - [XEP-0085 - Chat State Notifications](https://xmpp.org/extensions/xep-0085.html)
-  - [XEP-0092 - Software Version](https://xmpp.org/extensions/xep-0092.html)
-  - [XEP-0107 - User Mood](https://xmpp.org/extensions/xep-0107.html)
-  - [XEP-0153 - vCard-Based Avatars](https://xmpp.org/extensions/xep-0153.html)
-  - [XEP-0184 - Message Delivery Receipts](https://xmpp.org/extensions/xep-0184.html)
-  - [XEP-0198 - Stream Management](https://xmpp.org/extensions/xep-0198.html#feature)
-  - [XEP-0199 - XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
-  - [XEP-0203 - Delayed Delivery](http://www.xmpp.org/extensions/xep-0203.html)
-  - [XEP-0333 - Chat Markers](https://xmpp.org/extensions/xep-0333.html)
-  - [XEP-0334 - Message Processing Hints](https://xmpp.org/extensions/xep-0334.html)
+- [XEP-0030 - Service Discovery](http://www.xmpp.org/extensions/xep-0030.html)
+- [XEP-0045 - Multi-User Chat - 19.1](http://www.xmpp.org/extensions/xep-0045.html)
+- [XEP-0060 - Publish-Subscribe](http://xmpp.org/extensions/xep-0060.html)
+- [XEP-0066 - Out of Band Data](https://xmpp.org/extensions/xep-0066.html)
+- [XEP-0085 - Chat State Notifications](https://xmpp.org/extensions/xep-0085.html)
+- [XEP-0092 - Software Version](https://xmpp.org/extensions/xep-0092.html)
+- [XEP-0107 - User Mood](https://xmpp.org/extensions/xep-0107.html)
+- [XEP-0153 - vCard-Based Avatars](https://xmpp.org/extensions/xep-0153.html)
+- [XEP-0184 - Message Delivery Receipts](https://xmpp.org/extensions/xep-0184.html)
+- [XEP-0198 - Stream Management](https://xmpp.org/extensions/xep-0198.html#feature)
+- [XEP-0199 - XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+- [XEP-0203 - Delayed Delivery](http://www.xmpp.org/extensions/xep-0203.html)
+- [XEP-0333 - Chat Markers](https://xmpp.org/extensions/xep-0333.html)
+- [XEP-0334 - Message Processing Hints](https://xmpp.org/extensions/xep-0334.html)
+- [XEP-0388 - Extensible SASL Profile](https://xmpp.org/extensions/xep-0388.html)
+- [XEP-0440 - SASL Channel-Binding Type Capability](https://xmpp.org/extensions/xep-0440.html)
+- [XEP-0474 - SASL SCRAM Downgrade Protection](https://xmpp.org/extensions/xep-0474.html)
+
+### Security & Channel Binding
+
+- [RFC 5929 - Channel Bindings for TLS](https://datatracker.ietf.org/doc/html/rfc5929) (TLS 1.2 and earlier)
+- [RFC 9266 - Channel Bindings for TLS 1.3](https://datatracker.ietf.org/doc/html/rfc9266)
 
 ## Installation
 
@@ -62,6 +73,8 @@ You can basically do everything you want with `cr-xmpp`. It fully supports XMPP 
 
 2. Run `shards install`
 
+   This will automatically install the required `openssl_ext` dependency for channel binding support.
+
 ## Usage
 
 ```crystal
@@ -71,12 +84,16 @@ config = XMPP::Config.new(
   host: "localhost",
   jid: "test@localhost",
   password: "test",
+  tls: true,          # Enable TLS for secure connections (required for channel binding)
   log_file: STDOUT,   # Capture all out-going and in-coming messages
   # Order of SASL Authentication Mechanism, first matched method supported by server will be used
   # for authentication. Below is default order that will be used if `sasl_auth_order` param is not set.
-  sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512, XMPP::AuthMechanism::SCRAM_SHA_256,
-                    XMPP::AuthMechanism::SCRAM_SHA_1, XMPP::AuthMechanism::DIGEST_MD5,
-                    XMPP::AuthMechanism::PLAIN, XMPP::AuthMechanism::ANONYMOUS]
+  # SCRAM-PLUS variants (with channel binding) are preferred for enhanced security
+  sasl_auth_order: [XMPP::AuthMechanism::SCRAM_SHA_512_PLUS, XMPP::AuthMechanism::SCRAM_SHA_256_PLUS,
+                    XMPP::AuthMechanism::SCRAM_SHA_1_PLUS, XMPP::AuthMechanism::SCRAM_SHA_512,
+                    XMPP::AuthMechanism::SCRAM_SHA_256, XMPP::AuthMechanism::SCRAM_SHA_1,
+                    XMPP::AuthMechanism::DIGEST_MD5, XMPP::AuthMechanism::PLAIN,
+                    XMPP::AuthMechanism::ANONYMOUS]
 )
 
 router = XMPP::Router.new
@@ -119,6 +136,119 @@ end
 ```
 
 Refer to **examples** for more usage details.
+
+## Development & Testing
+
+A Docker Compose setup is provided for easy testing with a local XMPP server:
+
+```bash
+# 1. Generate SSL certificates (required for TLS/channel binding)
+./docker/prosody/generate-certs.sh
+
+# 2. Start XMPP server (test users are created automatically)
+docker compose up -d
+
+# 3. Wait a few seconds for server to be ready
+sleep 5
+
+# 4. Run examples
+XMPP_HOST=localhost XMPP_JID=test@localhost XMPP_PASSWORD=test crystal run examples/xmpp_echo.cr
+
+# View logs
+docker compose logs -f prosody
+
+# Stop server
+docker compose down
+```
+
+**Test accounts created automatically:**
+
+- `admin@localhost` (password: `admin123`)
+- `test@localhost` (password: `test`)
+- `user2@localhost` (password: `password2`)
+
+**Note:** On ARM64/Apple Silicon, Prosody runs via Rosetta 2 emulation (automatic in Docker Desktop).
+
+See [docker/README.md](docker/README.md) for detailed documentation.
+
+## Channel Binding for Enhanced Security
+
+This library supports **channel binding** for TLS connections, providing protection against man-in-the-middle attacks by cryptographically binding the SASL authentication to the underlying TLS connection.
+
+### What is Channel Binding?
+
+Channel binding ensures that the authentication credentials are tied to the specific TLS connection, preventing attackers from intercepting and relaying authentication over a different connection.
+
+### Supported Channel Binding Types
+
+- **tls-exporter** (RFC 9266) - For TLS 1.3 connections
+- **tls-server-end-point** (RFC 5929) - For TLS 1.2, 1.3 (fully implemented)
+- **tls-unique** (RFC 5929) - For TLS ≤ 1.2 (requires OpenSSL FFI)
+
+### SCRAM-PLUS Authentication
+
+Channel binding is used with SCRAM mechanisms that have the `-PLUS` suffix:
+
+- `SCRAM-SHA-512-PLUS` (most secure, recommended)
+- `SCRAM-SHA-256-PLUS`
+- `SCRAM-SHA-1-PLUS`
+
+These mechanisms are **automatically preferred** when:
+
+- TLS is enabled (`tls: true`)
+- Server advertises support for -PLUS variants
+- Channel binding data is available
+
+### Automatic Downgrade Protection (XEP-0474)
+
+The library automatically detects and warns about potential downgrade attacks where an attacker tries to force the use of weaker authentication mechanisms. When a SCRAM-PLUS mechanism is available but a non-PLUS variant is being used, a warning is logged.
+
+### Usage Example
+
+```crystal
+require "cr-xmpp"
+
+# Channel binding is enabled automatically with TLS
+config = XMPP::Config.new(
+  jid: "user@example.com",
+  password: "password",
+  host: "example.com",
+  tls: true  # Required for channel binding
+)
+
+client = XMPP::Client.new(config)
+# Authentication will automatically use SCRAM-PLUS if server supports it
+```
+
+### Server Requirements
+
+For channel binding to work, your XMPP server must:
+
+1. Support TLS connections
+2. Advertise SCRAM-PLUS mechanisms
+3. Optionally advertise supported channel binding types (XEP-0440)
+
+Example server stream features:
+
+```xml
+<stream:features>
+  <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+    <mechanism>SCRAM-SHA-256-PLUS</mechanism>
+    <mechanism>SCRAM-SHA-256</mechanism>
+    <channel-binding type='tls-exporter'/>
+    <channel-binding type='tls-server-end-point'/>
+  </mechanisms>
+</stream:features>
+```
+
+### Implementation Status
+
+- ✅ SCRAM-SHA-512-PLUS, SCRAM-SHA-256-PLUS, SCRAM-SHA-1-PLUS
+- ✅ XEP-0388: Extensible SASL Profile
+- ✅ XEP-0440: Channel binding type capability
+- ✅ XEP-0474: Downgrade protection
+- ✅ tls-server-end-point (fully functional)
+- ⚠️ tls-unique and tls-exporter (require OpenSSL FFI extensions)
 
 ## Development
 
@@ -177,7 +307,6 @@ class CustomExtension < Extension
 
   Registry.map_extension(PacketType::IQ, XMLName.new("my:custom:payload", "query"), CustomExtension)
 ```
-
 
 ## Contributing
 

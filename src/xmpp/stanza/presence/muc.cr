@@ -23,10 +23,10 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("password") { elem.text password } unless password.blank?
-        history.try &.to_xml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("password") { xml.text password } unless password.blank?
+        history.try &.to_xml xml
       end
     end
 
@@ -61,7 +61,7 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
 
       dict["maxchars"] = max_chars.to_s unless max_chars == -1
@@ -69,7 +69,7 @@ module XMPP::Stanza
       dict["seconds"] = seconds.to_s unless seconds == -1
       dict["since"] = DATE_TIME_FORMAT.format(since) unless since == Time.utc(seconds: 0, nanoseconds: 0)
 
-      elem.element(@@xml_name, dict)
+      xml.element(@@xml_name, dict)
     end
   end
 

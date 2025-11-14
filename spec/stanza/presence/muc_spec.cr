@@ -14,7 +14,7 @@ module XMPP::Stanza
 XML
     presence = Presence.new xml
 
-    if (muc = presence.get(MucPresence))
+    if muc = presence.get(MucPresence)
       muc = muc.as(MucPresence)
       muc.password.should eq("cauldronburn")
     else
@@ -35,7 +35,7 @@ XML
 </presence>
 X
     presence = Presence.new xml
-    if (muc = presence.get(MucPresence))
+    if muc = presence.get(MucPresence)
       muc = muc.as(MucPresence)
       muc.history.try &.max_stanzas.should eq(20)
     else
@@ -56,7 +56,7 @@ X
 </presence>
 X
     presence = Presence.new xml
-    if (muc = presence.get(MucPresence))
+    if muc = presence.get(MucPresence)
       muc = muc.as(MucPresence)
       muc.history.try &.seconds.should eq(180)
     else
@@ -77,7 +77,7 @@ X
 </presence>
 X
     presence = Presence.new xml
-    if (muc = presence.get(MucPresence))
+    if muc = presence.get(MucPresence)
       muc = muc.as(MucPresence)
       muc.history.try &.since.should eq(DATE_TIME_FORMAT.parse("1970-01-01T00:00:00Z"))
     else
@@ -98,7 +98,7 @@ X
 </presence>
 X
     presence = Presence.new xml
-    if (muc = presence.get(MucPresence))
+    if muc = presence.get(MucPresence)
       muc = muc.as(MucPresence)
       muc.history.try &.max_chars.should eq(0)
     else

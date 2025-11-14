@@ -10,7 +10,7 @@ config = XMPP::Config.new(
 router = XMPP::Router.new
 # router.on "presence" do |_, p|
 router.presence do |_, p|
-  if (msg = p.as?(XMPP::Stanza::Presence))
+  if msg = p.as?(XMPP::Stanza::Presence)
     puts msg
   else
     puts "Ignoring Packet: #{p}"
@@ -25,7 +25,7 @@ end
 # router.on "message", ->handle_message(XMPP::Sender, XMPP::Stanza::Packet)
 
 def handle_message(s : XMPP::Sender, p : XMPP::Stanza::Packet)
-  if (msg = p.as?(XMPP::Stanza::Message))
+  if msg = p.as?(XMPP::Stanza::Message)
     puts "Got message: #{msg.body}"
     reply = XMPP::Stanza::Message.new
     reply.to = msg.from

@@ -60,7 +60,7 @@ XML
     iq = IQ.new xml
     # Check that we have extracted the delegation info as IQPayload
     node = ""
-    if (payload = iq.payload)
+    if payload = iq.payload
       delegation = payload.as(Delegation)
       packet = delegation.forwarded.try &.stanza
       fail "Could not extract packet IQ" if packet.nil? || !packet.is_a?(IQ)

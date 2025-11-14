@@ -18,8 +18,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space)
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space)
     end
 
     def name : String
@@ -38,8 +38,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space)
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space)
     end
 
     def name : String
@@ -58,8 +58,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space)
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space)
     end
 
     def name : String
@@ -78,8 +78,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space)
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space)
     end
 
     def name : String

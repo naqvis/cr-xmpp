@@ -22,12 +22,12 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xmlns"] = @@xml_name.space unless @@xml_name.space.blank?
       dict["h"] = h.to_s unless h == 0
 
-      elem.element(@@xml_name.local, dict)
+      xml.element(@@xml_name.local, dict)
     end
 
     def name : String

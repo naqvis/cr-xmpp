@@ -11,7 +11,7 @@ module XMPP::Stanza
 </iq>
 XML
     iq = IQ.new xml
-    if (payload = iq.payload)
+    if payload = iq.payload
       payload.as(ControlSet)
     else
       fail "No payload found. Expected ControlSet payload, but found none"

@@ -13,7 +13,7 @@ module XMPP::Stanza
         XML
 
     parsed_msg = Message.new xml
-    parsed_msg.body.should eq ("My lord, dispatch; read o'er these articles.")
+    parsed_msg.body.should eq("My lord, dispatch; read o'er these articles.")
 
     fail "no extension found on parsed message" unless parsed_msg.extensions.size > 0
 

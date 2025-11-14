@@ -30,7 +30,7 @@ module XMPP::Stanza
 XML
 
     msg = Message.new xml
-    if (type = msg.error.try &.type)
+    if type = msg.error.try &.type
       type.should eq("cancel")
     else
       fail "Unable to parse Error XML"

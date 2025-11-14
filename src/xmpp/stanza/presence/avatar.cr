@@ -21,10 +21,10 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        if (p = photo)
-          elem.element("photo") { elem.text String.new(p) }
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        if p = photo
+          xml.element("photo") { xml.text String.new(p) }
         end
       end
     end

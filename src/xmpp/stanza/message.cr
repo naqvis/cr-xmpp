@@ -62,7 +62,7 @@ module XMPP::Stanza
     def self.new(xml : String)
       doc = XML.parse(xml)
       root = doc.first_element_child
-      if (root)
+      if root
         new(root)
       else
         raise "Invalid XML"
@@ -106,15 +106,15 @@ module XMPP::Stanza
       msg
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = attr_hash
 
-      elem.element(@@xml_name, dict) do
-        elem.element("subject") { elem.text subject } unless subject.blank?
-        elem.element("body") { elem.text body } unless body.blank?
-        elem.element("thread") { elem.text thread } unless thread.blank?
-        error.try &.to_xml elem
-        extensions.each { |e| e.to_xml elem }
+      xml.element(@@xml_name, dict) do
+        xml.element("subject") { xml.text subject } unless subject.blank?
+        xml.element("body") { xml.text body } unless body.blank?
+        xml.element("thread") { xml.text thread } unless thread.blank?
+        error.try &.to_xml xml
+        extensions.each(&.to_xml(xml))
       end
     end
 

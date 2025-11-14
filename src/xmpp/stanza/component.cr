@@ -90,7 +90,7 @@ module XMPP::Stanza
 
     def self.new(node : XML::Node)
       cls = new()
-      raise "Invalid node(#{node.name}, expecting #{cls.xml_name}" unless (node.name == cls.xml_name)
+      raise "Invalid node(#{node.name}, expecting #{cls.xml_name}" unless node.name == cls.xml_name
       node.attributes.each do |attr|
         case attr.name
         when "namespace" then cls.namespace = attr.children[0].content

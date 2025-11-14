@@ -27,12 +27,12 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xml:lang"] = lang unless lang.blank?
       dict["xmlns"] = @@xml_name.space
-      elem.element(@@xml_name.local, dict) do
-        fields.each { |f| f.to_xml elem }
+      xml.element(@@xml_name.local, dict) do
+        fields.each(&.to_xml(xml))
       end
     end
 
@@ -64,12 +64,12 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["name"] = name unless name.blank?
       dict["value"] = value unless value.blank?
 
-      elem.element(xml_name, dict)
+      xml.element(xml_name, dict)
     end
   end
 
@@ -90,8 +90,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
         any unless any.nil?
       end
     end
@@ -122,8 +122,8 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
         any unless any.nil?
       end
     end

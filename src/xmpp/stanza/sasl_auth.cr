@@ -4,11 +4,14 @@ require "./registry"
 module XMPP::Stanza
   # SASLAuth implements SASL Authentication initiation.
   # Reference: https://tools.ietf.org/html/rfc6120#section-6.4.2
+  # XEP-0388: Extensible SASL Profile
   class SASLAuth
     include Packet
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl auth")
     property mechanism : String = ""
     property body : String = ""
+    # XEP-0388: Initial response can be in child element
+    property initial_response : String = ""
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
@@ -18,20 +21,30 @@ module XMPP::Stanza
         when "mechanism" then cls.mechanism = attr.children[0].content
         end
       end
-      cls.body = node.text
+      # Check for initial-response child element (XEP-0388)
+      node.children.select(&.element?).each do |child|
+        case child.name
+        when "initial-response" then cls.initial_response = child.content
+        end
+      end
+      cls.body = node.text if cls.initial_response.blank?
       cls
     end
 
-    def initialize(@mechanism = "", @body = "")
+    def initialize(@mechanism = "", @body = "", @initial_response = "")
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xmlns"] = @@xml_name.space unless @@xml_name.space.blank?
       dict["mechanism"] = mechanism unless mechanism.blank?
 
-      elem.element(@@xml_name.local, dict) do
-        elem.text body unless body.blank?
+      xml.element(@@xml_name.local, dict) do
+        if !initial_response.blank?
+          xml.element("initial-response") { xml.text initial_response }
+        elsif !body.blank?
+          xml.text body
+        end
       end
     end
 
@@ -56,8 +69,8 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) { xml.text body }
     end
 
     def name : String
@@ -88,9 +101,9 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        any.try &.to_xml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        any.try &.to_xml xml
       end
     end
 
@@ -113,8 +126,8 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) { elem.text body }
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) { xml.text body }
     end
 
     def name : String
@@ -137,9 +150,9 @@ module XMPP::Stanza
     def initialize(@body = "")
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.text body unless body.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.text body unless body.blank?
       end
     end
 
@@ -172,10 +185,10 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("resource") { elem.text resource } unless resource.blank?
-        elem.element("jid") { elem.text jid } unless jid.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("resource") { xml.text resource } unless resource.blank?
+        xml.element("jid") { xml.text jid } unless jid.blank?
       end
     end
 
@@ -219,9 +232,9 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("optional") if optional
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("optional") if optional
       end
     end
 

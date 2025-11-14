@@ -49,7 +49,15 @@ module XMPP
     # Store current state
     @current_state : ConnectionState = ConnectionState::Disconnected
     # Callback used to propagate connection state changes
-    property event_handler : EventHandler? = nil
+    @event_handler : EventHandler? = nil
+
+    def event_handler=(handler : EventHandler?)
+      @event_handler = handler
+    end
+
+    def event_handler : EventHandler?
+      @event_handler
+    end
 
     private def update_state(state : ConnectionState)
       @current_state = state
@@ -85,7 +93,7 @@ module XMPP
 
     def start
       spawn do
-        sleep @timeout
+        sleep @timeout.seconds
         unless @abort_timeout
           @timeout_channel.send nil
         end

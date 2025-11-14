@@ -26,7 +26,7 @@ module XMPP::Stanza
     def self.new(xml : String)
       doc = XML.parse(xml)
       root = doc.first_element_child
-      if (root)
+      if root
         new(root)
       else
         raise "Invalid XML"
@@ -54,19 +54,19 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        caps.try &.to_xml elem
-        start_tls.try &.to_xml elem
-        mechanisms.try &.to_xml elem
-        bind.try &.to_xml elem
-        stream_management.try &.to_xml elem
-        session.try &.to_xml elem
-        p1_push.try &.to_xml elem
-        p1_rebind.try &.to_xml elem
-        p1_ack.try &.to_xml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        caps.try &.to_xml xml
+        start_tls.try &.to_xml xml
+        mechanisms.try &.to_xml xml
+        bind.try &.to_xml xml
+        stream_management.try &.to_xml xml
+        session.try &.to_xml xml
+        p1_push.try &.to_xml xml
+        p1_rebind.try &.to_xml xml
+        p1_ack.try &.to_xml xml
         any.each do |v|
-          v.to_xml elem
+          v.to_xml xml
         end
       end
     end
@@ -76,14 +76,14 @@ module XMPP::Stanza
     end
 
     def does_start_tls
-      if (t = start_tls)
+      if t = start_tls
         return {t, true}
       end
       {TLSStartTLS.new, false}
     end
 
     def tls_required
-      if (t = start_tls)
+      if t = start_tls
         return t.required
       end
       false

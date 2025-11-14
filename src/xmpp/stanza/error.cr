@@ -23,7 +23,7 @@ module XMPP::Stanza
     def self.new(xml : String)
       doc = XML.parse(xml)
       root = doc.first_element_child
-      if (root)
+      if root
         new(root)
       else
         raise "Invalid XML"
@@ -53,16 +53,16 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["code"] = code.to_s unless code == 0
       dict["type"] = type unless type.blank?
 
-      elem.element(@@xml_name, dict) do
+      xml.element(@@xml_name, dict) do
         unless reason.blank?
-          elem.element(reason, xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas")
+          xml.element(reason, xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas")
         end
-        elem.element("text", xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas") { elem.text text } unless text.blank?
+        xml.element("text", xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas") { xml.text text } unless text.blank?
       end
     end
 

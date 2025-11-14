@@ -2,24 +2,49 @@ require "openssl/pkcs5"
 require "openssl/hmac"
 require "openssl/sha1"
 
+require "../channel_binding"
+
 module XMPP
   private class AuthHandler
-    def auth_scram(method : String)
+    def auth_scram(method : String, use_channel_binding : Bool)
       case method
       when "sha256"
-        auth_scram_sha("SCRAM-SHA-256", OpenSSL::Algorithm::SHA256)
+        auth_scram_sha("SCRAM-SHA-256", OpenSSL::Algorithm::SHA256, use_channel_binding)
       when "sha512"
-        auth_scram_sha("SCRAM-SHA-512", OpenSSL::Algorithm::SHA512)
+        auth_scram_sha("SCRAM-SHA-512", OpenSSL::Algorithm::SHA512, use_channel_binding)
       else
-        auth_scram_sha("SCRAM-SHA-1", OpenSSL::Algorithm::SHA1)
+        auth_scram_sha("SCRAM-SHA-1", OpenSSL::Algorithm::SHA1, use_channel_binding)
       end
     end
 
     # X-SCRAM_SHA_X Auth - https://wiki.xmpp.org/web/SASL_and_SCRAM-SHA-1
-    def auth_scram_sha(name, algorithm)
+    # With optional channel binding support (RFC 5802, RFC 9266)
+    def auth_scram_sha(name, algorithm, use_channel_binding : Bool)
       nonce = nonce(16)
+
+      # Get channel binding data if requested and available
+      cb_type : ChannelBinding::Type? = nil
+      cb_data : Bytes? = nil
+      gs2_header = "n,,"
+
+      if use_channel_binding
+        if tls_sock = @tls_socket
+          if binding = ChannelBinding.get_channel_binding(tls_sock)
+            cb_type, cb_data = binding
+            # GS2 header with channel binding: "p=cb-type,,"
+            gs2_header = "p=#{cb_type},,"
+            name = "#{name}-PLUS" unless name.ends_with?("-PLUS")
+          else
+            # Channel binding requested but not available - fail
+            raise AuthenticationError.new "Channel binding requested but not available for TLS connection"
+          end
+        else
+          raise AuthenticationError.new "Channel binding requested but no TLS connection available"
+        end
+      end
+
       msg = "n=#{escape(@jid.node || "")},r=#{nonce}"
-      raw = "n,,#{msg}"
+      raw = "#{gs2_header}#{msg}"
       enc = Base64.strict_encode(raw)
       send Stanza::SASLAuth.new(mechanism: name, body: enc)
       val = Stanza::Parser.next_packet read_resp
@@ -29,7 +54,7 @@ module XMPP
         puts "Server Respnose: #{server_resp}"
         challenge = parse_scram_challenge(body, nonce)
         puts "algorithm: #{algorithm}, challenge: #{challenge}"
-        resp, server_sig = scram_response(msg, server_resp, challenge, algorithm)
+        resp, server_sig = scram_response(msg, server_resp, challenge, algorithm, gs2_header, cb_data)
 
         send Stanza::SASLResponse.new(resp)
         val = Stanza::Parser.next_packet read_resp
@@ -66,8 +91,16 @@ module XMPP
       OpenSSL::Digest.new(f)
     end
 
-    private def scram_response(initial_msg, server_resp, challenge, algorithm)
-      bare_msg = "c=biws,r=#{challenge["r"]}"
+    private def scram_response(initial_msg, server_resp, challenge, algorithm, gs2_header, cb_data : Bytes?)
+      # Channel binding data: base64(gs2-header || cb-data)
+      if cb_data
+        cb_input = gs2_header.to_slice + cb_data
+      else
+        cb_input = gs2_header.to_slice
+      end
+      cb_b64 = Base64.strict_encode(cb_input)
+
+      bare_msg = "c=#{cb_b64},r=#{challenge["r"]}"
       server_salt = Base64.decode(challenge["s"])
       hasher = hash_func(algorithm)
       puts "key_size: #{hasher.digest_size},   server_salt: #{server_salt}"
@@ -104,17 +137,17 @@ module XMPP
       # MUST cause authentication failure when the attribute is parsed by
       # the other end.
       raise "Server sent reserved attribute 'm'" if res.has_key?("m")
-      if (i = res["i"]?)
+      if i = res["i"]?
         raise "Server sent invalid iteration count" if i.to_i?.nil?
       else
         raise "Server didn't sent iteration count"
       end
-      if (salt = res["s"]?)
+      if salt = res["s"]?
         raise "Server sent empty salt" if salt.blank?
       else
         raise "Server didn't sent salt"
       end
-      if (r = res["r"]?)
+      if r = res["r"]?
         raise "Server sent nonce didn't match" unless r.starts_with?(nonce)
       else
         raise "Server didn't sent nonce"

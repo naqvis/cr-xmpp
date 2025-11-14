@@ -147,13 +147,13 @@ module XMPP
     end
 
     private def read_resp
-      if (socket = @conn)
+      if socket = @conn
         b = Bytes.new(1024)
         n = socket.read(b)
         raise ConnectionClosed.new "connection closed" if socket.closed? || n == 0
         xml = String.new(b[0, n])
         document = XML.parse(xml)
-        if (r = document.first_element_child)
+        if r = document.first_element_child
           r
         else
           raise "Invalid response from server: #{document.to_xml}"

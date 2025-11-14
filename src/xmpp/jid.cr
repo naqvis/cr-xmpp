@@ -54,7 +54,7 @@ module XMPP
     def self.new(jid : String)
       raise ArgumentError.new "jid cannot be empty" if jid.blank?
       begin
-        parsed = jid.match(PATTERN).not_nil!.captures
+        parsed = jid.match!(PATTERN).captures
       rescue ex
         raise ArgumentError.new "Invalid jid"
       else

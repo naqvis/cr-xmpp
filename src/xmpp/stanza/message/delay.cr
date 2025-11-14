@@ -26,12 +26,12 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xmlns"] = @@xml_name.space
       dict["from"] = from unless from.blank?
       dict["stamp"] = DELAY_DATE_TIME_FORMAT.format(stamp) unless stamp == Time.utc(seconds: 0, nanoseconds: 0)
-      elem.element(@@xml_name.local, dict)
+      xml.element(@@xml_name.local, dict)
     end
 
     def name : String

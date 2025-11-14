@@ -20,9 +20,9 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        cause.try &.to_xml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        cause.try &.to_xml xml
       end
     end
 

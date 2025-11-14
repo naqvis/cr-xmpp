@@ -89,7 +89,7 @@ module XMPP
     end
 
     protected def supports_ping
-      if (disco = @disco_info)
+      if disco = @disco_info
         disco.features.each do |f|
           return true if f.var == "urn:xmpp:ping"
         end
@@ -112,7 +112,7 @@ module XMPP
       raise ConnectionClosed.new "connection closed" if @stream_logger.closed? || n == 0
       xml = String.new(b[0, n])
       document = XML.parse(xml)
-      if (r = document.first_element_child)
+      if r = document.first_element_child
         r
       else
         raise "Invalid response from server: #{document.to_xml}"
@@ -143,7 +143,7 @@ module XMPP
 
     private def start_tls_if_supported(socket, o)
       _, ok = @features.does_start_tls
-      if (ok)
+      if ok
         send "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
         begin
           Stanza::TLSProceed.new read_resp
@@ -174,7 +174,9 @@ module XMPP
     end
 
     private def auth(o)
-      auth = AuthHandler.new(@stream_logger, @features, o.password, o.parsed_jid)
+      # Pass TLS socket if available for channel binding support
+      tls_socket = @stream_logger.is_a?(StreamLogger) ? @stream_logger.as(StreamLogger).tls_socket : nil
+      auth = AuthHandler.new(@stream_logger, @features, o.password, o.parsed_jid, tls_socket)
       auth.authenticate o.sasl_auth_order
     end
 
@@ -215,7 +217,7 @@ module XMPP
       iq = Stanza::IQ.new read_resp
 
       # TODO check all elements
-      if (payload = iq.payload.as?(Stanza::Bind))
+      if payload = iq.payload.as?(Stanza::Bind)
         @bind_jid = payload.jid # our local id (with possibly randomly generated resource)
       else
         raise "iq bind result missing"

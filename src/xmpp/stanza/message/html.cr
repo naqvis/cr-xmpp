@@ -28,12 +28,12 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xml:lang"] = lang unless lang.blank?
       dict["xmlns"] = @@xml_name.space
-      elem.element(@@xml_name.local, dict) do
-        body.try &.to_xml elem
+      xml.element(@@xml_name.local, dict) do
+        body.try &.to_xml xml
       end
     end
 
@@ -63,23 +63,23 @@ module XMPP::Stanza
       end
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        get_xhtml elem
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        get_xhtml xml
       end
     end
 
-    private def get_xhtml(elem : XML::Builder)
+    private def get_xhtml(xml : XML::Builder)
       opt = XML::HTMLParserOptions.default | XML::HTMLParserOptions::NOIMPLIED
       doc = XML.parse_html inner_xml, opt
       root = doc.first_element_child
-      if (node = root)
-        elem.element(node.name, attrs_to_hash node.attributes) do
+      if node = root
+        xml.element(node.name, attrs_to_hash node.attributes) do
           node.children.select(&.text?).each do |child|
-            elem.text child.text
+            xml.text child.text
           end
           node.children.select(&.element?).each do |child|
-            elem.element(child.name, attrs_to_hash child.attributes) { elem.text child.text }
+            xml.element(child.name, attrs_to_hash child.attributes) { xml.text child.text }
           end
         end
       end

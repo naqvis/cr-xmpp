@@ -81,9 +81,9 @@ module XMPP::Stanza
     def decode_component(node : XML::Node)
       case node.name
       when "handshake" then Handshake.new node # handshake is used to authenticate components
-      when "message"  then Message.new node
-      when "presence" then Presence.new node
-      when "iq"       then IQ.new node
+      when "message"   then Message.new node
+      when "presence"  then Presence.new node
+      when "iq"        then IQ.new node
       else
         raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
       end

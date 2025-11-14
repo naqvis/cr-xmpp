@@ -1,0 +1,2 @@
+# SSL certificates will be generated here
+# Run: ./docker/prosody/generate-certs.sh

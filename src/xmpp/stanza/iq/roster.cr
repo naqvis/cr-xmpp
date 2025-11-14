@@ -32,14 +32,14 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xmlns"] = @@xml_name.space unless @@xml_name.space.blank?
       dict["ver"] = ver unless ver.blank?
 
-      elem.element(@@xml_name.local, dict) do
+      xml.element(@@xml_name.local, dict) do
         item.each do |v|
-          v.to_xml elem
+          v.to_xml xml
         end
       end
     end
@@ -86,7 +86,7 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
 
       dict["approved"] = approved.to_s if approved
@@ -95,9 +95,9 @@ module XMPP::Stanza
       dict["name"] = name unless name.blank?
       dict["subscription"] = subscription unless subscription.blank?
 
-      elem.element(@@xml_name, dict) do
+      xml.element(@@xml_name, dict) do
         group.each do |v|
-          elem.element("group") { elem.text v } unless v.blank?
+          xml.element("group") { xml.text v } unless v.blank?
         end
       end
     end

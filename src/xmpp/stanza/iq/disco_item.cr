@@ -31,14 +31,14 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
       dict["xmlns"] = @@xml_name.space unless @@xml_name.space.blank?
       dict["node"] = node unless node.blank?
 
-      elem.element(@@xml_name.local, dict) do
+      xml.element(@@xml_name.local, dict) do
         items.each do |v|
-          v.to_xml elem
+          v.to_xml xml
         end
       end
     end
@@ -86,14 +86,14 @@ module XMPP::Stanza
       cls
     end
 
-    def to_xml(elem : XML::Builder)
+    def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
 
       dict["jid"] = jid unless jid.blank?
       dict["node"] = node unless node.blank?
       dict["name"] = name unless name.blank?
 
-      elem.element(@@xml_name, dict)
+      xml.element(@@xml_name, dict)
     end
   end
 

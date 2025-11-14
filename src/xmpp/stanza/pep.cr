@@ -32,15 +32,15 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element("artist") { elem.text artist } unless artist.blank?
-        elem.element("length") { elem.text length.to_s } unless length == 0
-        elem.element("rating") { elem.text rating.to_s } unless rating == 0
-        elem.element("source") { elem.text source } unless source.blank?
-        elem.element("title") { elem.text title } unless title.blank?
-        elem.element("track") { elem.text track } unless track.blank?
-        elem.element("uri") { elem.text uri } unless uri.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("artist") { xml.text artist } unless artist.blank?
+        xml.element("length") { xml.text length.to_s } unless length == 0
+        xml.element("rating") { xml.text rating.to_s } unless rating == 0
+        xml.element("source") { xml.text source } unless source.blank?
+        xml.element("title") { xml.text title } unless title.blank?
+        xml.element("track") { xml.text track } unless track.blank?
+        xml.element("uri") { xml.text uri } unless uri.blank?
       end
     end
 
@@ -72,10 +72,10 @@ module XMPP::Stanza
       pr
     end
 
-    def to_xml(elem : XML::Builder)
-      elem.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        elem.element(value) unless value.blank?
-        elem.element("text") { elem.text text } unless text.blank?
+    def to_xml(xml : XML::Builder)
+      xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element(value) unless value.blank?
+        xml.element("text") { xml.text text } unless text.blank?
       end
     end
 

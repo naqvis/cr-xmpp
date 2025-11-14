@@ -25,13 +25,13 @@ module XMPP
     # route is called by the XMPP client to dispatch stanza received using the set up routes.
     # It is also used by test, but is not supposed to be used directly by users of the library.
     protected def route(s : Sender, p : Stanza::Packet)
-      if (r = match(p))
+      if r = match(p)
         # If we match, route the packet
         r.call s, p
         return
       end
       # If there is no match and we receive an iq set or get, we need to send a reply
-      if (iq = p.as?(Stanza::IQ))
+      if iq = p.as?(Stanza::IQ)
         return iq_not_implemented(s, iq) if [Stanza::IQ_TYPE_GET, Stanza::IQ_TYPE_SET].includes? iq.type
       end
     end
@@ -122,12 +122,12 @@ module XMPP
     end
 
     def stanza_type(types : Array(String))
-      types.map! { |i| i.downcase }
+      types.map!(&.downcase)
       add_matcher NSTypeMatcher.new(types)
     end
 
     def iq_namespaces(namespaces : Array(String))
-      namespaces.map! { |i| i.downcase }
+      namespaces.map!(&.downcase)
       add_matcher NSIQMatcher.new(namespaces)
     end
   end
@@ -188,7 +188,7 @@ module XMPP
     def match(p : Stanza::Packet) : Bool
       return false unless p.is_a?(Stanza::IQ)
       iq = p.as(Stanza::IQ)
-      if (payload = iq.payload)
+      if payload = iq.payload
         @types.includes? payload.namespace
       else
         false

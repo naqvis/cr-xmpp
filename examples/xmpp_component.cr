@@ -48,7 +48,7 @@ sm = XMPP::StreamManager.new component
 sm.run
 
 def handle_message(s : XMPP::Sender, p : XMPP::Stanza::Packet)
-  if (msg = p.as?(XMPP::Stanza::Message))
+  if msg = p.as?(XMPP::Stanza::Message)
     puts "Got message: #{msg.body}"
   else
     puts "Ignoring Packet: #{p}"
