@@ -62,15 +62,16 @@ module XMPP
       end
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     def initialize(node, domain, resource)
       raise ArgumentError.new "Invalid jid. Domain cannot be empty" if domain.nil? || domain.try &.blank?
       @domain = domain.not_nil!
       raise ArgumentError.new "Domain too long" if @domain.size > 1023
-      raise ArgumentError.new "Invalid Node in jid" if (check = @domain.count { |c| ['@', '/', ' '].includes?(c) }) && check > 0
+      raise ArgumentError.new "Invalid Node in jid" if (check = @domain.count { |chr| ['@', '/', ' '].includes?(chr) }) && check > 0
 
       @node = node
       raise ArgumentError.new "Node too long" if (@node || "").size > 1023
-      raise ArgumentError.new "Invalid Node in jid" if (@node.try &.blank?) || (check = @node.try &.count { |c| ['@', '/', '\'', '"', ':', '<', '>'].includes?(c) }) && check > 0
+      raise ArgumentError.new "Invalid Node in jid" if (@node.try &.blank?) || (check = @node.try &.count { |chr| ['@', '/', '\'', '"', ':', '<', '>'].includes?(chr) }) && check > 0
 
       @resource = resource || "Crystal-XMPP"
       raise ArgumentError.new "Resource too long" if (@resource || "").size > 1023

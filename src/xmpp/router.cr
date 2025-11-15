@@ -67,7 +67,7 @@ module XMPP
     # when registers a new route with a matcher for a given packet type
     def when(*type : String, &handler : Callback)
       arr = Array(String).new
-      type.each { |t| arr << t }
+      type.each { |typ| arr << typ }
       route(&handler).stanza_type(arr)
     end
 
@@ -108,8 +108,8 @@ module XMPP
     end
 
     def match(p : Stanza::Packet)
-      @matchers.each do |m|
-        return nil unless m.match(p)
+      @matchers.each do |mch|
+        return nil unless mch.match(p)
       end
       # we have a match, let's pass info route match info
       @cb

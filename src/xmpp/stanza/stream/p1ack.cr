@@ -8,8 +8,8 @@ module XMPP::Stanza
     class_getter xml_name : XMLName = XMLName.new("p1:ack ack")
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       new()
     end
 

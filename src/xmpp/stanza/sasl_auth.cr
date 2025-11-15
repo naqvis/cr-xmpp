@@ -14,7 +14,7 @@ module XMPP::Stanza
     property initial_response : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.attributes.each do |attr|
         case attr.name
@@ -62,8 +62,8 @@ module XMPP::Stanza
     property body : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       cls = new()
       cls.body = node.text
       cls
@@ -87,7 +87,7 @@ module XMPP::Stanza
     property any : Nodes? = nil # error reason is a subelement
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
         case child.name
@@ -119,8 +119,8 @@ module XMPP::Stanza
     property body : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       cls = new()
       cls.body = node.text
       cls
@@ -142,8 +142,8 @@ module XMPP::Stanza
     property body : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       new(node.text)
     end
 
@@ -172,7 +172,7 @@ module XMPP::Stanza
     property jid : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
         case child.name
@@ -214,13 +214,13 @@ module XMPP::Stanza
   class StreamSession < Extension
     include IQPayload
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-session session")
-    property optional : Bool = false # If element does exist, it mean we are not required to open session
+    property? optional : Bool = false # If element does exist, it mean we are not required to open session
 
     def initialize(@optional = false)
     end
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
         case child.name
@@ -234,7 +234,7 @@ module XMPP::Stanza
 
     def to_xml(xml : XML::Builder)
       xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
-        xml.element("optional") if optional
+        xml.element("optional") if optional?
       end
     end
 

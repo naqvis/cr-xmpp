@@ -14,7 +14,7 @@ module XMPP::Stanza
     property features : Array(Feature) = Array(Feature).new
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.attributes.each do |attr|
         case attr.name
@@ -58,9 +58,9 @@ module XMPP::Stanza
     end
 
     def add_features(namespace : Array(String))
-      namespace.each do |ns|
+      namespace.each do |nsp|
         f = Feature.new
-        f.var = ns
+        f.var = nsp
         @features << f
       end
     end

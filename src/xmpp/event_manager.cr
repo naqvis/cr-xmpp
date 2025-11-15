@@ -20,13 +20,69 @@ module XMPP
 
   # SMState holds Stream Management information regarding the session that can be
   # used to resume session after disconnect
-  # TODO: Store location for IP affinity
-  # TODO: Store max and timestamp, to check if we should retry resumption or not
   class SMState
-    property id : String      # Stream Management ID
-    property inbound : UInt32 # Inbound stanza count
+    property id : String                                         # Stream Management ID
+    property inbound : UInt32                                    # Inbound stanza count
+    property outbound : UInt32                                   # Outbound stanza count (sent by us)
+    property location : String                                   # Server location for IP affinity (XEP-0198)
+    property max : UInt32                                        # Maximum resumption time in seconds
+    property timestamp : Time                                    # When this state was created/last updated
+    property error : String                                      # Last error message if SM failed
+    property unacked_stanzas : Array(String) = Array(String).new # Queue of unacknowledged stanzas
 
-    def initialize(@id = "", @inbound = 0_u32)
+    def initialize(@id = "", @inbound = 0_u32, @outbound = 0_u32, @location = "",
+                   @max = 0_u32, @timestamp = Time.utc, @error = "")
+    end
+
+    # Check if resumption should be attempted based on max time
+    def resumption_expired? : Bool
+      return false if max == 0 # No expiration set
+      (Time.utc - timestamp).total_seconds > max
+    end
+
+    # Check if this state is valid for resumption
+    def can_resume? : Bool
+      !id.blank? && !resumption_expired?
+    end
+
+    # Update timestamp to current time
+    def touch
+      @timestamp = Time.utc
+    end
+
+    # Add a stanza to the unacknowledged queue
+    def queue_stanza(stanza : String)
+      @unacked_stanzas << stanza
+      @outbound += 1
+    end
+
+    # Process acknowledgement from server
+    # Server sends the count of stanzas it has received
+    def process_ack(h : UInt32)
+      # h is the number of stanzas the server has received
+      # Calculate how many stanzas we can remove from queue
+      acked_count = h - (outbound - unacked_stanzas.size.to_u32)
+
+      if acked_count > 0 && acked_count <= unacked_stanzas.size
+        # Remove acknowledged stanzas from the front of the queue
+        @unacked_stanzas.shift(acked_count.to_i)
+        Logger.debug "Acknowledged #{acked_count} stanzas, #{@unacked_stanzas.size} remaining in queue"
+      end
+    end
+
+    # Get stanzas that need to be resent
+    def stanzas_to_resend : Array(String)
+      @unacked_stanzas.dup
+    end
+
+    # Clear the unacknowledged queue (after successful resend)
+    def clear_queue
+      @unacked_stanzas.clear
+    end
+
+    # Check if we have unacknowledged stanzas
+    def has_unacked_stanzas? : Bool
+      !@unacked_stanzas.empty?
     end
   end
 

@@ -13,8 +13,8 @@ module XMPP::Stanza
     property uri : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.children.select(&.element?).each do |child|
         case child.name
@@ -49,24 +49,50 @@ module XMPP::Stanza
     end
   end
 
-  # Mood defines deta model for XEP-0107 - User Mood
+  # Mood defines data model for XEP-0107 - User Mood
   # See: https://xmpp.org/extensions/xep-0107.html
   class Mood < MsgExtension
     class_getter xml_name : XMLName = XMLName.new("http://jabber.org/protocol/mood", "mood")
-    # TODO: Custom parsing to extract mood type from tag name.
-    # Note: the list is predefined.
+
+    # Predefined mood types from XEP-0107
+    VALID_MOODS = {
+      "afraid", "amazed", "angry", "amorous", "annoyed", "anxious", "aroused",
+      "ashamed", "bored", "brave", "calm", "cautious", "cold", "confident",
+      "confused", "contemplative", "contented", "cranky", "crazy", "creative",
+      "curious", "dejected", "depressed", "disappointed", "disgusted", "dismayed",
+      "distracted", "embarrassed", "envious", "excited", "flirtatious", "frustrated",
+      "grateful", "grieving", "grumpy", "guilty", "happy", "hopeful", "hot",
+      "humbled", "humiliated", "hungry", "hurt", "impressed", "in_awe", "in_love",
+      "indignant", "interested", "intoxicated", "invincible", "jealous", "lonely",
+      "lost", "lucky", "mean", "moody", "nervous", "neutral", "offended",
+      "outraged", "playful", "proud", "relaxed", "relieved", "remorseful",
+      "restless", "sad", "sarcastic", "satisfied", "serious", "shocked", "shy",
+      "sick", "sleepy", "spontaneous", "stressed", "strong", "surprised", "thankful",
+      "thirsty", "tired", "undefined", "weak", "worried",
+    }
+
     property value : String = ""
     property text : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.children.select(&.element?).each do |child|
         case child.name
-        when "text" then pr.text = child.content
+        when "text"
+          pr.text = child.content
         else
-          pr.value = child.name
+          # Extract mood type from element name
+          # Only accept valid mood types from XEP-0107
+          mood_type = child.name
+          if VALID_MOODS.includes?(mood_type)
+            pr.value = mood_type
+          else
+            # Log unknown mood types but don't fail
+            Logger.debug "Unknown mood type: #{mood_type}"
+            pr.value = mood_type
+          end
         end
       end
       pr
@@ -81,6 +107,17 @@ module XMPP::Stanza
 
     def name : String
       @@xml_name.local
+    end
+
+    # Check if the mood value is a valid XEP-0107 mood type
+    def valid_mood? : Bool
+      VALID_MOODS.includes?(value)
+    end
+
+    # Get a human-readable description of the mood
+    def mood_description : String
+      return "No mood set" if value.blank?
+      value.gsub('_', ' ').capitalize
     end
   end
 end

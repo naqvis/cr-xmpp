@@ -11,8 +11,8 @@ module XMPP::Stanza
     property fields : Array(ControlField) = Array(ControlField).new
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.attributes.each do |attr|
         case attr.name
@@ -80,8 +80,8 @@ module XMPP::Stanza
     property any : XML::Node? = nil
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.children.select(&.element?).each do |child|
         pr.any = child
@@ -112,8 +112,8 @@ module XMPP::Stanza
     property any : XML::Node? = nil
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.children.select(&.element?).each do |child|
         pr.any = child

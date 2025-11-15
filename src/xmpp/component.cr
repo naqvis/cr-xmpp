@@ -1,4 +1,8 @@
 require "./event_manager"
+require "./component/disco"
+require "./component/delegation"
+require "./component/privilege"
+require "./component/errors"
 require "socket"
 require "digest/sha1"
 
@@ -39,14 +43,33 @@ module XMPP
     include StreamClient
     # Track and broadcast connection state
     include EventManager
+    # XEP-0030: Service Discovery
+    include ComponentDisco
+    # XEP-0355: Namespace Delegation
+    include ComponentDelegation
+    # XEP-0356: Privileged Entity
+    include ComponentPrivilege
 
     getter options : ComponentOptions
     @router : Router
     # TCP level connection
     @conn : IO?
+    # Service Discovery
+    getter disco_info : ComponentDisco::DiscoInfo
+    getter disco_items : ComponentDisco::DiscoItems
 
     def initialize(@options, @router)
       @xmlns = ""
+      @disco_info = ComponentDisco::DiscoInfo.new
+      @disco_items = ComponentDisco::DiscoItems.new
+
+      # Add default identity from options
+      @disco_info.add_identity(@options.category, @options.type, @options.name)
+
+      # Setup automatic handlers
+      setup_disco_handlers(@disco_info, @disco_items)
+      setup_delegation_handlers
+      setup_privilege_handlers
     end
 
     # connect triggers component connection to XMPP server component port.
@@ -71,14 +94,14 @@ module XMPP
       case val
       when .is_a?(Stanza::StreamError)
         v = val.as(Stanza::StreamError)
-        raise "handshake failed : #{v.error.try &.xml_name.local}"
+        handle_stream_error(v)
       when .is_a?(Stanza::Handshake)
         # start the receiver fiber
         spawn do
           recv
         end
       else
-        raise "expecting handshake result, got : #{val.name}"
+        raise ComponentError.new("expecting handshake result, got : #{val.name}")
       end
     end
 
@@ -88,9 +111,54 @@ module XMPP
     end
 
     def disconnect
-      send("</stream:stream>")
-      # TODO: Add a way to wait for stream close acknowledgement from the server for clean disconnect
-      @conn.try &.close
+      return unless conn = @conn
+      return if conn.closed?
+
+      begin
+        # Send closing stream tag
+        send("</stream:stream>")
+
+        # Wait for server's closing stream tag (with timeout)
+        # RFC 6120: The receiving entity should respond with a closing stream tag
+        wait_for_stream_close(conn, timeout: 3.0)
+      rescue ex
+        Logger.warn "Error during disconnect: #{ex.message}"
+      ensure
+        conn.close unless conn.closed?
+        update_state ConnectionState::Disconnected
+      end
+    end
+
+    # Wait for the server to send its closing stream tag
+    private def wait_for_stream_close(conn : IO, timeout : Float64)
+      done = Channel(Bool).new
+
+      spawn do
+        begin
+          # Try to read the closing stream tag from server
+          b = Bytes.new(1024)
+          n = conn.read(b)
+          if n > 0
+            xml = String.new(b[0, n])
+            # Check if we received a closing stream tag
+            if xml.includes?("</stream:stream>")
+              Logger.debug "Received closing stream tag from server"
+            end
+          end
+        rescue ex
+          Logger.debug "Stream close read error (expected): #{ex.message}"
+        ensure
+          done.send(true)
+        end
+      end
+
+      # Wait for either completion or timeout
+      select
+      when done.receive
+        Logger.debug "Clean disconnect completed"
+      when timeout(timeout.seconds)
+        Logger.debug "Disconnect timeout reached, forcing close"
+      end
     end
 
     # sends marshal's XMPP stanza and sends it to the server.
@@ -137,6 +205,30 @@ module XMPP
       end
     end
 
+    # XEP-0114: Handle stream errors with specific error types
+    private def handle_stream_error(error : Stanza::StreamError)
+      error_type = error.error.try &.xml_name.local || "unknown"
+      error_text = error.text
+
+      case error_type
+      when "conflict"
+        # XEP-0114: Component JID is already connected
+        raise ComponentConflictError.new(error_text.blank? ? nil : error_text)
+      when "host-unknown"
+        # XEP-0114: Hostname is not recognized by the server
+        raise ComponentHostUnknownError.new(@options.domain)
+      when "not-authorized"
+        # Authentication failed (wrong secret)
+        raise ComponentAuthenticationError.new(error_text.blank? ? "Invalid component secret" : error_text)
+      when "invalid-namespace"
+        # Invalid namespace in stream
+        raise ComponentInvalidNamespaceError.new(error_text.blank? ? nil : error_text)
+      else
+        # Generic stream error
+        raise ComponentStreamError.new(error_type, error_text.blank? ? nil : error_text)
+      end
+    end
+
     # hand_shake generates an authentication token based on stream_id and shared secret
     private def hand_shake(stream_id : String)
       # 1. concatenate stream_id received from the server with the shared secret.
@@ -162,10 +254,5 @@ module XMPP
         raise "Component is not connected"
       end
     end
-
-    # TODO: Add support for discovery management directly in component
-    # TODO: Support multiple identities on disco info
-    # TODO: Support returning features on disco info
-
   end
 end

@@ -9,17 +9,17 @@ config = XMPP::Config.new(
 
 router = XMPP::Router.new
 # router.on "presence" do |_, p|
-router.presence do |_, p|
-  if msg = p.as?(XMPP::Stanza::Presence)
+router.presence do |_, prs|
+  if msg = prs.as?(XMPP::Stanza::Presence)
     puts msg
   else
-    puts "Ignoring Packet: #{p}"
+    puts "Ignoring Packet: #{prs}"
   end
 end
 
 # router.when "chat" do |s, p|
-router.message do |s, p|
-  handle_message(s, p)
+router.message do |snd, pms|
+  handle_message(snd, pms)
 end
 
 # router.on "message", ->handle_message(XMPP::Sender, XMPP::Stanza::Packet)

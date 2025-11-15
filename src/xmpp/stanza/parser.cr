@@ -3,12 +3,13 @@ module XMPP::Stanza
     extend self
 
     # Reads and checks the opening XMPP stream element.
-    # TODO It returns a stream structure containing:
-    # - Host: You can check the host against the host you were expecting to connect to
-    # - Id: the Stream ID is a temporary shared secret used for some hash calculation. It is also used by ProcessOne
-    #       reattach features (allowing to resume an existing stream at the point the connection was interrupted, without
-    #       getting through the authentication process.
-    # TODO We should handle stream error from XEP-0114 ( <conflict/> or <host-unknown/> )
+    # Returns a tuple of (stream_id, xmlns) where:
+    # - stream_id: The Stream ID is a temporary shared secret used for some hash calculation. It is also used by ProcessOne
+    #              reattach features (allowing to resume an existing stream at the point the connection was interrupted, without
+    #              getting through the authentication process.
+    # - xmlns: The namespace of the stream
+    #
+    # Note: XEP-0114 stream errors (<conflict/> and <host-unknown/>) are handled in Component class
 
     def init_stream(node : XML::Node)
       ns = node.namespaces.values.join(",")
@@ -36,6 +37,7 @@ module XMPP::Stanza
       case ns
       when NS_STREAM            then decode_stream node
       when NS_SASL              then decode_sasl node
+      when NS_SASL2             then decode_sasl2 node
       when NS_CLIENT            then decode_client node
       when NS_COMPONENT         then decode_component node
       when NS_STREAM_MANAGEMENT then SMFeatureHandler.parse node
@@ -63,6 +65,21 @@ module XMPP::Stanza
       when "failure"   then SASLFailure.new node
       else
         raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
+      end
+    end
+
+    # decode_sasl2 decodes XEP-0388/XEP-0480 SASL2 packets
+    def decode_sasl2(node : XML::Node)
+      case node.name
+      when "authenticate" then SASL2Authenticate.new node
+      when "challenge"    then SASL2Challenge.new node
+      when "response"     then SASL2Response.new node
+      when "continue"     then SASL2Continue.new node
+      when "next"         then SASL2Next.new node
+      when "task-data"    then SASL2TaskData.new node
+      when "success"      then SASL2Success.new node
+      else
+        raise "unexpected SASL2 packet #{node.namespace.try &.href} <#{node.name}>"
       end
     end
 

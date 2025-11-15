@@ -14,8 +14,8 @@ module XMPP::Stanza
     # transform generic XML content into hierarchical Node structure.
     def self.new(node : XML::Node)
       cls = new()
-      raise "Invalid node(#{node.name}, expecting #{cls.xml_name.to_s}" unless (node.namespace.try &.href == cls.xml_name.space) &&
-                                                                               (node.name == cls.xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{cls.xml_name}" unless (node.namespace.try &.href == cls.xml_name.space) &&
+                                                                          (node.name == cls.xml_name.local)
       node.children.select(&.element?).each do |child|
         obj = Parser.decode_client(child)
         cls.stanza = obj if obj.is_a?(Packet)

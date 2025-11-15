@@ -23,8 +23,8 @@ module XMPP::Stanza
     features = [XMPP::Stanza::NS_DISCO_INFO, NS_DISCO_ITEMS, "jabber:iq:version", "urn:xmpp:delegation:1"]
     features.size.should eq(pp.features.size)
 
-    pp.features.each_with_index do |f, i|
-      f.var.should eq(features[i])
+    pp.features.each_with_index do |feat, i|
+      feat.var.should eq(features[i])
     end
 
     # Check identity

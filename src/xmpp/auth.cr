@@ -1,5 +1,6 @@
 require "./auth/*"
 require "./channel_binding"
+require "./stanza/sasl_upgrade"
 
 module XMPP
   class AuthenticationError < Exception; end
@@ -58,6 +59,12 @@ module XMPP
     end
 
     def authenticate(methods : Array(AuthMechanism))
+      # Try SASL2 first if available
+      if @features.supports_sasl2?
+        return authenticate_sasl2_if_supported(methods)
+      end
+
+      # Fall back to legacy SASL
       if mechanisms = @features.mechanisms.try &.mechanism
         methods.each do |method|
           if mechanisms.includes? method.to_s
@@ -82,7 +89,7 @@ module XMPP
       when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram("sha256", true)
       when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram("sha512", true)
       else
-        raise AuthenticationError.new "Auth mechanism '#{method.to_s}' not implemented. Currently implemented mechanisms are [#{SASL_AUTH_ORDER.join(",")}]"
+        raise AuthenticationError.new "Auth mechanism '#{method}' not implemented. Currently implemented mechanisms are [#{SASL_AUTH_ORDER.join(",")}]"
       end
     end
 

@@ -22,21 +22,21 @@ config = XMPP::Config.new(
 
 router = XMPP::Router.new
 
-router.presence do |_, p|
-  if msg = p.as?(XMPP::Stanza::Presence)
+router.presence do |_, prs|
+  if msg = prs.as?(XMPP::Stanza::Presence)
     puts "Presence: #{msg.from} - #{msg.show}"
   end
 end
 
-router.message do |s, p|
-  if msg = p.as?(XMPP::Stanza::Message)
+router.message do |snd, pms|
+  if msg = pms.as?(XMPP::Stanza::Message)
     puts "Message from #{msg.from}: #{msg.body}"
 
     # Echo the message back
     reply = XMPP::Stanza::Message.new
     reply.to = msg.from
     reply.body = "Echo: #{msg.body}"
-    s.send reply
+    snd.send reply
   end
 end
 

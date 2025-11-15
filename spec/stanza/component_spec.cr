@@ -15,7 +15,8 @@ XML
     ns_delegated = ""
     msg.extensions.each do |ext|
       if ext.is_a?(Delegation)
-        ns_delegated = ext.as(Delegation).delegated.try &.namespace
+        delegated_list = ext.as(Delegation).delegated
+        ns_delegated = delegated_list.first.namespace unless delegated_list.empty?
       end
     end
     ns_delegated.should eq("http://jabber.org/protocol/pubsub")
@@ -32,7 +33,11 @@ XML
 
     msg = Message.new xml
     # Check that we have extracted the delegation info as MsgExtension
-    ns_delegated = msg.get(Delegation).try &.as(Delegation).delegated.try &.namespace
+    delg = msg.get(Delegation).try &.as(Delegation)
+    ns_delegated = ""
+    if (delegation = delg) && !delegation.delegated.empty?
+      ns_delegated = delegation.delegated.first.namespace
+    end
     ns_delegated.should eq("http://jabber.org/protocol/pubsub")
   end
 

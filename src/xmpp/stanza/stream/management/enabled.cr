@@ -13,7 +13,7 @@ module XMPP::Stanza
     property max : UInt32 = 0_u32
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.attributes.each do |attr|
         case attr.name

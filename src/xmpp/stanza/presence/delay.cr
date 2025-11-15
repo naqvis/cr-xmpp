@@ -10,8 +10,8 @@ module XMPP::Stanza
 
     def self.new(node : XML::Node)
       ns = node.namespace.try &.href || ""
-      raise "Invalid node(#{ns} #{node.name}) expecting: #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                                    (node.name == @@xml_name.local)
+      raise "Invalid node(#{ns} #{node.name}) expecting: #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                               (node.name == @@xml_name.local)
       cls = new()
       node.attributes.each do |attr|
         case attr.name

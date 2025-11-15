@@ -13,7 +13,7 @@ module XMPP::Stanza
     property item : Array(RosterItem) = Array(RosterItem).new
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.attributes.each do |attr|
         case attr.name
@@ -56,7 +56,7 @@ module XMPP::Stanza
   class RosterItem
     class_getter xml_name : String = "item"
     property group : Array(String) = Array(String).new
-    property approved : Bool = false
+    property? approved : Bool = false
     property ask : String = ""
     property jid : String = ""
     property name : String = ""
@@ -89,7 +89,7 @@ module XMPP::Stanza
     def to_xml(xml : XML::Builder)
       dict = Hash(String, String).new
 
-      dict["approved"] = approved.to_s if approved
+      dict["approved"] = approved?.to_s if approved?
       dict["ask"] = ask unless ask.blank?
       dict["jid"] = jid unless jid.blank?
       dict["name"] = name unless name.blank?

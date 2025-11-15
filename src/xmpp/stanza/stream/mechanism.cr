@@ -4,16 +4,20 @@ module XMPP::Stanza
   # Mechanisms
   # Reference: RFC 6120 - https://tools.ietf.org/html/rfc6120#section-6.4.1
   # XEP-0440: SASL Channel-Binding Type Capability
+  # XEP-0480: SASL Upgrade Tasks
   private class SASLMechanisms
     class_getter xml_name : XMLName = XMLName.new("urn:ietf:params:xml:ns:xmpp-sasl mechanisms")
     property mechanism : Array(String) = Array(String).new
     # XEP-0440: Server advertises supported channel binding types
     property channel_binding_types : Array(String) = Array(String).new
+    # XEP-0480: Server advertises supported upgrade tasks
+    property upgrade_tasks : Array(String) = Array(String).new
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}), expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
+        ns = child.namespace.try &.href
         case child.name
         when "mechanism"
           cls.mechanism << child.content
@@ -21,6 +25,11 @@ module XMPP::Stanza
           # XEP-0440: <channel-binding type="tls-exporter"/>
           if type_attr = child.attributes["type"]?
             cls.channel_binding_types << type_attr.content
+          end
+        when "upgrade"
+          # XEP-0480: <upgrade xmlns='urn:xmpp:sasl:upgrade:0'>UPGR-SCRAM-SHA-256</upgrade>
+          if ns == "urn:xmpp:sasl:upgrade:0"
+            cls.upgrade_tasks << child.content
           end
         else
           # shouldn't be the case, but for any changes just ignore it.
@@ -36,6 +45,9 @@ module XMPP::Stanza
         end
         channel_binding_types.each do |cb_type|
           xml.element("channel-binding", {"type" => cb_type})
+        end
+        upgrade_tasks.each do |task|
+          xml.element("upgrade", {"xmlns" => "urn:xmpp:sasl:upgrade:0"}) { xml.text task }
         end
       end
     end
@@ -58,6 +70,16 @@ module XMPP::Stanza
         return "tls-server-end-point" if supports_channel_binding?("tls-server-end-point")
       end
       nil
+    end
+
+    # XEP-0480: Check if server supports a specific upgrade task
+    def supports_upgrade?(task : String) : Bool
+      upgrade_tasks.includes?(task)
+    end
+
+    # XEP-0480: Get available SCRAM upgrade tasks
+    def available_scram_upgrades : Array(String)
+      upgrade_tasks.select(&.starts_with?("UPGR-SCRAM-"))
     end
   end
 end

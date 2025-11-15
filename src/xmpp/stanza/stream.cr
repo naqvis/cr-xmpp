@@ -13,6 +13,7 @@ module XMPP::Stanza
     # Stream features
     property start_tls : TLSStartTLS? = nil
     property mechanisms : SASLMechanisms? = nil
+    property sasl2_authentication : SASL2Authentication? = nil
     property bind : Bind? = nil
     property stream_management : StreamManagement? = nil
     # Obsolete
@@ -33,20 +34,22 @@ module XMPP::Stanza
       end
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     def self.new(node : XML::Node)
       cls = new()
       node.children.select(&.element?).each do |child|
         ns = (child.namespace.try &.href) || ""
         case {child.name, ns}
-        when {Caps.xml_name.local, Caps.xml_name.space}                         then cls.caps = Caps.new(child)
-        when {TLSStartTLS.xml_name.local, TLSStartTLS.xml_name.space}           then cls.start_tls = TLSStartTLS.new(child)
-        when {SASLMechanisms.xml_name.local, SASLMechanisms.xml_name.space}     then cls.mechanisms = SASLMechanisms.new(child)
-        when {Bind.xml_name.local, Bind.xml_name.space}                         then cls.bind = Bind.new(child)
-        when {StreamManagement.xml_name.local, StreamManagement.xml_name.space} then cls.stream_management = StreamManagement.new(child)
-        when {StreamSession.xml_name.local, StreamSession.xml_name.space}       then cls.session = StreamSession.new(child)
-        when {P1Push.xml_name.local, P1Push.xml_name.space}                     then cls.p1_push = P1Push.new(child)
-        when {P1Rebind.xml_name.local, P1Rebind.xml_name.space}                 then cls.p1_rebind = P1Rebind.new(child)
-        when {P1Ack.xml_name.local, P1Ack.xml_name.space}                       then cls.p1_ack = P1Ack.new(child)
+        when {Caps.xml_name.local, Caps.xml_name.space}                               then cls.caps = Caps.new(child)
+        when {TLSStartTLS.xml_name.local, TLSStartTLS.xml_name.space}                 then cls.start_tls = TLSStartTLS.new(child)
+        when {SASLMechanisms.xml_name.local, SASLMechanisms.xml_name.space}           then cls.mechanisms = SASLMechanisms.new(child)
+        when {SASL2Authentication.xml_name.local, SASL2Authentication.xml_name.space} then cls.sasl2_authentication = SASL2Authentication.new(child)
+        when {Bind.xml_name.local, Bind.xml_name.space}                               then cls.bind = Bind.new(child)
+        when {StreamManagement.xml_name.local, StreamManagement.xml_name.space}       then cls.stream_management = StreamManagement.new(child)
+        when {StreamSession.xml_name.local, StreamSession.xml_name.space}             then cls.session = StreamSession.new(child)
+        when {P1Push.xml_name.local, P1Push.xml_name.space}                           then cls.p1_push = P1Push.new(child)
+        when {P1Rebind.xml_name.local, P1Rebind.xml_name.space}                       then cls.p1_rebind = P1Rebind.new(child)
+        when {P1Ack.xml_name.local, P1Ack.xml_name.space}                             then cls.p1_ack = P1Ack.new(child)
         else
           cls.any << Node.new(child)
         end
@@ -59,6 +62,7 @@ module XMPP::Stanza
         caps.try &.to_xml xml
         start_tls.try &.to_xml xml
         mechanisms.try &.to_xml xml
+        sasl2_authentication.try &.to_xml xml
         bind.try &.to_xml xml
         stream_management.try &.to_xml xml
         session.try &.to_xml xml
@@ -91,6 +95,11 @@ module XMPP::Stanza
 
     def does_stream_management
       !stream_management.nil?
+    end
+
+    # Check if server supports SASL2 (XEP-0388)
+    def supports_sasl2?
+      !sasl2_authentication.nil?
     end
   end
 end

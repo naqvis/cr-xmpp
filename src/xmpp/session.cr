@@ -13,7 +13,7 @@ module XMPP
     getter stream_id : String
     getter sm_state : SMState
     getter features : Stanza::StreamFeatures
-    getter tls_enabled : Bool = false
+    getter? tls_enabled : Bool = false
     getter last_packet_id : Int32 = 0
 
     # Read/Write
@@ -32,6 +32,7 @@ module XMPP
       @stream_logger = STDOUT
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     def initialize(io, config : Config, @sm_state)
       @connected = !io.closed?
       @bind_jid = ""
@@ -44,7 +45,7 @@ module XMPP
       @features = open config.parsed_jid.domain
 
       ok = @features.tls_required
-      if ok && !config.tls
+      if ok && !config.tls?
         raise AuthenticationError.new "Server requires TLS session. Ensure you either 'tls' attribute of config to 'true'"
       end
 
@@ -59,11 +60,11 @@ module XMPP
         if tls_conn.is_a?(IO::Buffered)
           tls_conn.sync = false
         end
-        raise AuthenticationError.new "Failed to negotiate TLS session" unless @tls_enabled
+        raise AuthenticationError.new "Failed to negotiate TLS session" unless tls_enabled?
       else
         tls_conn = io
       end
-      reset(io, tls_conn, config) if @tls_enabled
+      reset(io, tls_conn, config) if tls_enabled?
 
       # auth
       auth config
@@ -90,8 +91,8 @@ module XMPP
 
     protected def supports_ping
       if disco = @disco_info
-        disco.features.each do |f|
-          return true if f.var == "urn:xmpp:ping"
+        disco.features.each do |feat|
+          return true if feat.var == "urn:xmpp:ping"
         end
       end
       false
@@ -153,7 +154,7 @@ module XMPP
         # Conert existing connection to TLS
         context = OpenSSL::SSL::Context::Client.new
 
-        context.verify_mode = OpenSSL::SSL::VerifyMode::None if o.skip_cert_verify
+        context.verify_mode = OpenSSL::SSL::VerifyMode::None if o.skip_cert_verify?
         begin
           tls_conn = OpenSSL::SSL::Socket::Client.new(socket, context)
           tls_conn.sync = true
@@ -182,7 +183,8 @@ module XMPP
 
     private def resume(o)
       return false unless @features.does_stream_management
-      return false if @sm_state.id.blank?
+      return false unless @sm_state.can_resume?
+
       xml = sprintf "<resume xmlns='%s' h='%d' previd='%s'/>",
         Stanza::NS_STREAM_MANAGEMENT, @sm_state.inbound, @sm_state.id
 
@@ -195,9 +197,14 @@ module XMPP
           raise "session resumption: mismatched id"
         end
         @sm_state.inbound = p.h
+        @sm_state.touch # Update timestamp on successful resume
         return true
       elsif packet.is_a?(Stanza::SMFailed)
-        # do nothing
+        p = packet.as(Stanza::SMFailed)
+        # Store error information for later inspection
+        error_msg = "SM resume failed: #{p.error_description}"
+        @sm_state.error = error_msg
+        Logger.debug error_msg
       else
         raise "unexpected reply to SM resume"
       end
@@ -216,11 +223,14 @@ module XMPP
       send xml
       iq = Stanza::IQ.new read_resp
 
-      # TODO check all elements
+      # Validate bind response
+      raise "bind response must be type 'result', got: #{iq.type}" unless iq.type == "result"
+
       if payload = iq.payload.as?(Stanza::Bind)
+        raise "bind response missing JID" if payload.jid.blank?
         @bind_jid = payload.jid # our local id (with possibly randomly generated resource)
       else
-        raise "iq bind result missing"
+        raise "iq bind result missing or invalid payload"
       end
     end
 
@@ -246,9 +256,20 @@ module XMPP
       packet = Stanza::Parser.next_packet read_resp
       if packet.is_a?(Stanza::SMEnabled)
         p = packet.as(Stanza::SMEnabled)
-        @sm_state = SMState.new(id: p.id)
+        # Store all SM state including location and max for resumption
+        @sm_state = SMState.new(
+          id: p.id,
+          location: p.location,
+          max: p.max,
+          timestamp: Time.utc
+        )
+        Logger.debug "Stream Management enabled: id=#{p.id}, location=#{p.location}, max=#{p.max}"
       elsif packet.is_a?(Stanza::SMFailed)
-        # TODO: Store error in SMState, for later inspection
+        p = packet.as(Stanza::SMFailed)
+        # Store error information for later inspection
+        error_msg = "SM enable failed: #{p.error_description}"
+        @sm_state.error = error_msg
+        Logger.warn error_msg
       else
         raise "unexpected reply to SM enable"
       end

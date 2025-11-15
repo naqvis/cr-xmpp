@@ -8,7 +8,7 @@ module XMPP::Stanza
     parsed_sf = StreamFeatures.new xml
     tls, ok = parsed_sf.does_start_tls
     fail "StartTLS feature should not be enabled" if ok
-    fail "StartTLS cannot be required as default" if tls.required
+    fail "StartTLS cannot be required as default" if tls.required?
   end
 
   it "Test StartTLS" do
@@ -23,7 +23,7 @@ X
 
     tls, ok = parsed_sf.does_start_tls
     fail "StartTLS feature should be enabled" unless ok
-    fail "StartTLS feature should be required" unless tls.required
+    fail "StartTLS feature should be required" unless tls.required?
   end
 
   it "Test Stream Management" do

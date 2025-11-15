@@ -9,7 +9,7 @@ module XMPP::Stanza
     xml = stream_features.to_xml
     parsed_stream = StreamFeatures.new xml
 
-    fail "Session should be optional" unless parsed_stream.session.try &.optional
+    fail "Session should be optional" unless parsed_stream.session.try &.optional?
   end
 
   it "Check that the Session tag can be used in IQ decoding" do
@@ -22,6 +22,6 @@ module XMPP::Stanza
     session = parsed_iq.payload
     fail "Missing session payload" if session.nil? || !session.is_a?(StreamSession)
     session = session.as(StreamSession)
-    fail "Session should be optional" unless session.optional
+    fail "Session should be optional" unless session.optional?
   end
 end

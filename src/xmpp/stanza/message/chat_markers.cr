@@ -10,8 +10,8 @@ module XMPP::Stanza
     class_getter xml_name : XMLName = XMLName.new("urn:xmpp:chat-markers:0", "markable")
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
 
       pr
@@ -31,8 +31,8 @@ module XMPP::Stanza
     property id : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.attributes.each do |attr|
         case attr.name
@@ -61,8 +61,8 @@ module XMPP::Stanza
     property id : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.attributes.each do |attr|
         case attr.name
@@ -91,8 +91,8 @@ module XMPP::Stanza
     property id : String = ""
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name.to_s}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                             (node.name == @@xml_name.local)
+      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
+                                                                        (node.name == @@xml_name.local)
       pr = new()
       node.attributes.each do |attr|
         case attr.name

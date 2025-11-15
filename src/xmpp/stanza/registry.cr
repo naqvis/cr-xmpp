@@ -43,7 +43,7 @@ module XMPP::Stanza
     def self.get_extension_type(pkt_type : PacketType, name : XMLName)
       key = RegistryKey.new pkt_type, name.space
       @@msg_type_lock.synchronize {
-        raise "No #{pkt_type.to_s} Extension Handler for packet namespace \"#{name.space}\" Found" unless @@msg_types.has_key?(key)
+        raise "No #{pkt_type} Extension Handler for packet namespace \"#{name.space}\" Found" unless @@msg_types.has_key?(key)
         store = @@msg_types[key]
         result = store[name.local]?
         return store["*"] if result.nil? && name.local != "*"
