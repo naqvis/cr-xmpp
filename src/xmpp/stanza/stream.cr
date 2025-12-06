@@ -88,7 +88,7 @@ module XMPP::Stanza
 
     def tls_required
       if t = start_tls
-        return t.required
+        return t.required?
       end
       false
     end
