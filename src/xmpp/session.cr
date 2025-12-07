@@ -50,12 +50,12 @@ module XMPP
       end
 
       _, ok = @features.does_start_tls
-      if config.tls && !ok
+      if config.tls? && !ok
         raise AuthenticationError.new "You requested TLS session, but Server doesn't support TLS"
       end
 
       # starttls
-      if ok && config.tls
+      if ok && config.tls?
         tls_conn = start_tls_if_supported io, config
         if tls_conn.is_a?(IO::Buffered)
           tls_conn.sync = false
@@ -168,7 +168,7 @@ module XMPP
         return tls_conn
       end
       # If we do not allow cleartext connections, make it explicit that server do not support starttls
-      raise AuthenticationError.new "XMPP server does not advertise support for starttls" if o.tls
+      raise AuthenticationError.new "XMPP server does not advertise support for starttls" if o.tls?
 
       # starttls is not supported => we do not upgrade the connection
       socket
@@ -237,7 +237,7 @@ module XMPP
     # After the bind, if the session is not optional (as per old RFC 3921), we send the session open iq.
     private def rfc_3921_session(o)
       # We only negotiate session binding if it is mandatory, we skip it when optional.
-      unless @features.session.try &.optional
+      unless @features.session.try &.optional?
         xml = sprintf "<iq type='set' id='%s'><session xmlns='%s'/></iq>", packet_id, Stanza::NS_SESSION
         send xml
         begin
