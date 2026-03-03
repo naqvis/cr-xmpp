@@ -328,10 +328,12 @@ module XMPP::Stanza
     property id : String = ""
     property tune : Tune? = nil
     property mood : Mood? = nil
+    property raw_node : XML::Node? = nil
 
     def self.new(node : XML::Node)
       raise "Invalid #{@@xml_name} node: #{node.name}" unless node.name == @@xml_name
       pr = new()
+      pr.raw_node = node
       node.attributes.each do |attr|
         case attr.name
         when "id" then pr.id = attr.children[0].content
