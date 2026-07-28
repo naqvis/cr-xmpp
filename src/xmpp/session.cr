@@ -68,7 +68,7 @@ module XMPP
 
       # auth
       auth config
-      reset(tls_conn, tls_conn, config)
+      reset(tls_conn, tls_conn, config) unless @features.sasl2_authentication
 
       # attemp resumption
       return if resume config
