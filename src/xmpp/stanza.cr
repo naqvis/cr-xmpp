@@ -13,17 +13,18 @@ module XMPP::Stanza
   end
 
   # Namespace Constants
-  NS_STREAM            = "http://etherx.jabber.org/streams"
-  NS_STREAM_MANAGEMENT = "urn:xmpp:sm:3"
-  NS_TLS               = "urn:ietf:params:xml:ns:xmpp-tls"
-  NS_SASL              = "urn:ietf:params:xml:ns:xmpp-sasl"
-  NS_BIND              = "urn:ietf:params:xml:ns:xmpp-bind"
-  NS_SESSION           = "urn:ietf:params:xml:ns:xmpp-session"
-  NS_CLIENT            = "jabber:client"
-  NS_COMPONENT         = "jabber:component:accept"
-  NS_SASL_UPGRADE      = "urn:xmpp:sasl:upgrade:0"
-  NS_SCRAM_UPGRADE     = "urn:xmpp:scram-upgrade:0"
-  NS_SASL2             = "urn:xmpp:sasl:2"
+  NS_STREAM               = "http://etherx.jabber.org/streams"
+  NS_STREAM_MANAGEMENT    = "urn:xmpp:sm:3"
+  NS_TLS                  = "urn:ietf:params:xml:ns:xmpp-tls"
+  NS_SASL                 = "urn:ietf:params:xml:ns:xmpp-sasl"
+  NS_BIND                 = "urn:ietf:params:xml:ns:xmpp-bind"
+  NS_SESSION              = "urn:ietf:params:xml:ns:xmpp-session"
+  NS_CLIENT               = "jabber:client"
+  NS_COMPONENT            = "jabber:component:accept"
+  NS_SASL_UPGRADE         = "urn:xmpp:sasl:upgrade:0"
+  NS_SCRAM_UPGRADE        = "urn:xmpp:scram-upgrade:0"
+  NS_SASL2                = "urn:xmpp:sasl:2"
+  NS_SASL_CHANNEL_BINDING = "urn:xmpp:sasl-cb:0"
 end
 
 require "./stanza/*"

@@ -5,33 +5,30 @@ module XMPP
     # XEP-0388: SASL2 Authentication
     # Detects if server supports SASL2 and uses it, otherwise falls back to legacy SASL
     def authenticate_sasl2_if_supported(methods : Array(AuthMechanism))
-      # Check if server supports SASL2
       if sasl2 = @features.sasl2_authentication
-        Logger.info("Server supports SASL2 (XEP-0388), using modern authentication flow")
-        return authenticate_sasl2(methods, sasl2)
+        if selected = select_mechanism(methods, sasl2.mechanisms, sasl2: true)
+          Logger.info("Server supports SASL2 (XEP-0388), using modern authentication flow")
+          return authenticate_sasl2(selected, sasl2)
+        end
+
+        # A server may advertise a mechanism through SASL2 that this client
+        # only implements through classic SASL (currently DIGEST-MD5).
+        if @features.mechanisms
+          Logger.info("No usable SASL2 mechanism; falling back to classic SASL")
+          return authenticate_legacy(methods)
+        end
+
+        raise_insecure_plain_if_applicable(methods, sasl2.mechanisms)
+        raise AuthenticationError.new "None of the preferred Auth mechanisms '[#{methods.join(",")}]' supported by SASL2. Server supported mechanisms are [#{sasl2.mechanisms.join(",")}]"
       end
 
-      # Fall back to legacy SASL
       Logger.info("Server does not support SASL2, using legacy SASL authentication")
-      authenticate(methods)
+      authenticate_legacy(methods)
     end
 
     # Authenticate using SASL2 (XEP-0388)
     # ameba:disable Metrics/CyclomaticComplexity
-    private def authenticate_sasl2(methods : Array(AuthMechanism), sasl2 : Stanza::SASL2Authentication)
-      # Find first supported mechanism
-      selected_mechanism = nil
-      methods.each do |method|
-        if sasl2.supports_mechanism?(method.to_s)
-          selected_mechanism = method
-          break
-        end
-      end
-
-      unless selected_mechanism
-        raise AuthenticationError.new "None of the preferred Auth mechanisms '[#{methods.join(",")}]' supported by server. Server supported mechanisms are [#{sasl2.mechanisms.join(",")}]"
-      end
-
+    private def authenticate_sasl2(selected_mechanism : AuthMechanism, sasl2 : Stanza::SASL2Authentication)
       Logger.info("Selected SASL2 mechanism: #{selected_mechanism}")
 
       # Determine if we should request upgrades (XEP-0480)
@@ -51,20 +48,53 @@ module XMPP
 
       # Perform SASL2 authentication based on mechanism
       case selected_mechanism
-      when AuthMechanism::SCRAM_SHA_1        then auth_scram_sasl2("sha1", false, upgrades)
-      when AuthMechanism::SCRAM_SHA_256      then auth_scram_sasl2("sha256", false, upgrades)
-      when AuthMechanism::SCRAM_SHA_512      then auth_scram_sasl2("sha512", false, upgrades)
-      when AuthMechanism::SCRAM_SHA_1_PLUS   then auth_scram_sasl2("sha1", true, upgrades)
-      when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram_sasl2("sha256", true, upgrades)
-      when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram_sasl2("sha512", true, upgrades)
+      when AuthMechanism::SCRAM_SHA_1        then auth_scram_sasl2("sha1", false, upgrades, sasl2.mechanisms)
+      when AuthMechanism::SCRAM_SHA_256      then auth_scram_sasl2("sha256", false, upgrades, sasl2.mechanisms)
+      when AuthMechanism::SCRAM_SHA_512      then auth_scram_sasl2("sha512", false, upgrades, sasl2.mechanisms)
+      when AuthMechanism::SCRAM_SHA_1_PLUS   then auth_scram_sasl2("sha1", true, upgrades, sasl2.mechanisms)
+      when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram_sasl2("sha256", true, upgrades, sasl2.mechanisms)
+      when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram_sasl2("sha512", true, upgrades, sasl2.mechanisms)
+      when AuthMechanism::PLAIN              then auth_simple_sasl2(selected_mechanism, plain_initial_response)
+      when AuthMechanism::ANONYMOUS          then auth_simple_sasl2(selected_mechanism)
       else
         raise AuthenticationError.new "SASL2 mechanism '#{selected_mechanism}' not implemented yet"
       end
     end
 
+    private def plain_initial_response : String
+      Base64.strict_encode("\x00#{@jid.node}\x00#{@password}")
+    end
+
+    private def auth_simple_sasl2(mechanism : AuthMechanism, initial_response = "")
+      user_agent = Stanza::SASL2UserAgent.new(
+        id: UUID.random.to_s,
+        software: "Crystal-XMPP",
+        device: "Crystal Client"
+      )
+      send Stanza::SASL2Authenticate.new(
+        mechanism: mechanism.to_s,
+        initial_response: initial_response,
+        user_agent: user_agent
+      )
+
+      case response = Stanza::Parser.next_packet(read_resp)
+      when Stanza::SASL2Success
+        handle_sasl2_success(response, mechanism.to_s)
+      when Stanza::SASLFailure
+        raise AuthenticationError.new "#{mechanism} - auth failure: #{response.any.try &.to_xml}"
+      else
+        raise AuthenticationError.new "#{mechanism} - expected SASL2 success or failure, got #{response.name}"
+      end
+    end
+
     # SCRAM authentication using SASL2 flow
     # ameba:disable Metrics/CyclomaticComplexity
-    private def auth_scram_sasl2(method : String, use_channel_binding : Bool, upgrades : Array(String))
+    private def auth_scram_sasl2(
+      method : String,
+      use_channel_binding : Bool,
+      upgrades : Array(String),
+      advertised_mechanisms : Array(String),
+    )
       algorithm = case method
                   when "sha256" then OpenSSL::Algorithm::SHA256
                   when "sha512" then OpenSSL::Algorithm::SHA512
@@ -86,7 +116,8 @@ module XMPP
 
       if use_channel_binding
         if tls_sock = @tls_socket
-          if binding = ChannelBinding.get_channel_binding(tls_sock)
+          advertised = @features.sasl_channel_binding.try(&.types) || [] of String
+          if binding = ChannelBinding.get_channel_binding(tls_sock, advertised)
             cb_type, cb_data = binding
             gs2_header = "p=#{cb_type},,"
             name = "#{name}-PLUS" unless name.ends_with?("-PLUS")
@@ -123,21 +154,31 @@ module XMPP
       val = Stanza::Parser.next_packet read_resp
 
       # Handle challenge
+      server_sig = nil.as(String?)
       if val.is_a?(Stanza::SASL2Challenge)
         body = val.as(Stanza::SASL2Challenge).body
-        server_resp = Base64.decode_string(body)
-        challenge = parse_scram_challenge(body, nonce)
-        resp, _server_sig = scram_response(msg, server_resp, challenge, algorithm, gs2_header, cb_data)
+        server_first = parse_scram_challenge(body, nonce, algorithm, advertised_mechanisms)
+        resp, server_sig = scram_response(
+          msg,
+          server_first.raw,
+          server_first.attributes,
+          algorithm,
+          gs2_header,
+          cb_data
+        )
 
         send Stanza::SASL2Response.new(resp)
         val = Stanza::Parser.next_packet read_resp
       end
+      raise AuthenticationError.new("#{name} - server did not send a SCRAM challenge") unless server_sig
 
       # Handle success or continue
       if val.is_a?(Stanza::SASL2Success)
-        handle_sasl2_success(val.as(Stanza::SASL2Success), name)
+        handle_sasl2_success(val.as(Stanza::SASL2Success), name, server_sig)
       elsif val.is_a?(Stanza::SASL2Continue)
-        handle_sasl2_continue(val.as(Stanza::SASL2Continue), upgrades, algorithm)
+        continue = val.as(Stanza::SASL2Continue)
+        verify_scram_server_final!(continue.additional_data, server_sig)
+        handle_sasl2_continue(continue, upgrades, algorithm)
       elsif val.is_a?(Stanza::SASLFailure)
         v = val.as(Stanza::SASLFailure)
         raise AuthenticationError.new "#{name} - auth failure: #{v.any.try &.to_xml}"
@@ -147,13 +188,13 @@ module XMPP
     end
 
     # Handle SASL2 success
-    private def handle_sasl2_success(success : Stanza::SASL2Success, mechanism_name : String)
-      # Verify additional data if present (server signature for SCRAM)
-      if !success.body.blank?
-        _sig = Base64.decode_string(success.body)
-        # For SCRAM, verify server signature
-        # Note: We'd need to pass server_sig here for full verification
-        # For now, we trust the success
+    private def handle_sasl2_success(
+      success : Stanza::SASL2Success,
+      mechanism_name : String,
+      expected_signature : String? = nil,
+    )
+      if signature = expected_signature
+        verify_scram_server_final!(success.additional_data, signature)
       end
 
       Logger.info("#{mechanism_name} - SASL2 Auth successful")

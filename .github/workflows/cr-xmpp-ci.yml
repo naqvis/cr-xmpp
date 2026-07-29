@@ -2,33 +2,48 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
-    branches: [master]
+    branches: [main, master]
   schedule:
     - cron: "0 6 * * 6"
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  unit:
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Crystal
-        uses: crystal-lang/install-crystal@v1
-      - name: Install dependencies
-        run: shards install
-      - name: Run tests
-        run: crystal spec
-      - name: Generate docs
-        run: crystal doc
-      - name: Deploy
-        if: github.ref == 'refs/heads/main'
-        uses: JamesIves/github-pages-deploy-action@v4
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: ./scripts/ci unit
+
+  integration:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: ./scripts/ci integration
+
+  deploy-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [unit, integration]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: shards install
+      - run: crystal docs
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages

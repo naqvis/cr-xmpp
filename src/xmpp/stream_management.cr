@@ -20,10 +20,10 @@ module XMPP
     def send_with_sm(xml : String)
       # Only queue if SM is enabled and this is a stanza (not nonza)
       if @sm_enabled && should_track_stanza?(xml)
-        @session.sm_state.queue_stanza(xml)
+        @session.sm_state.queue_stanza(xml, MAX_QUEUE_SIZE)
 
         # Check queue size and request ack if needed
-        if @session.sm_state.unacked_stanzas.size >= MAX_QUEUE_SIZE / 2
+        if @session.sm_state.unacked_count >= MAX_QUEUE_SIZE / 2
           request_ack
         end
       end
@@ -67,16 +67,9 @@ module XMPP
 
       Logger.info "Resending #{stanzas.size} unacknowledged stanzas"
 
-      stanzas.each do |stanza|
-        begin
-          @session.send(stanza)
-        rescue ex
-          Logger.error "Failed to resend stanza: #{ex.message}"
-        end
-      end
-
-      # Clear the queue after resending
-      @session.sm_state.clear_queue
+      # Resent stanzas remain unacknowledged until the server advances h.
+      # Removing them here would silently lose delivery tracking.
+      stanzas.each { |stanza| @session.send(stanza) }
     end
 
     # Check if a stanza should be tracked

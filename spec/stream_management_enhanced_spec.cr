@@ -77,6 +77,38 @@ describe "Stream Management - Enhanced Features" do
         state.process_ack(10_u32)
         state.unacked_stanzas.should be_empty
       end
+
+      it "preserves the acknowledgement baseline after a completed synchronous exchange" do
+        state = XMPP::SMState.new(id: "managed")
+        state.queue_stanza("<iq id='disco1'/>")
+        state.process_ack(state.outbound)
+
+        state.queue_stanza("<presence id='later'/>")
+        state.process_ack(1_u32)
+
+        state.unacked_stanzas.should eq ["<presence id='later'/>"]
+        state.process_ack(2_u32)
+        state.unacked_stanzas.should be_empty
+      end
+
+      it "rejects acknowledgements beyond the outbound window" do
+        state = XMPP::SMState.new
+        state.queue_stanza("<message id='1'/>")
+
+        expect_raises(XMPP::StreamManagementError, /invalid stream-management acknowledgement/) do
+          state.process_ack(2_u32)
+        end
+        state.unacked_stanzas.size.should eq 1
+      end
+
+      it "handles the UInt32 sequence-number wrap required by XEP-0198" do
+        state = XMPP::SMState.new(outbound: UInt32::MAX)
+        state.queue_stanza("<message id='wrapped'/>")
+
+        state.outbound.should eq 0_u32
+        state.process_ack(0_u32)
+        state.unacked_stanzas.should be_empty
+      end
     end
 
     describe "#stanzas_to_resend" do
@@ -115,6 +147,19 @@ describe "Stream Management - Enhanced Features" do
       end
     end
 
+    describe "bounded queue" do
+      it "applies backpressure before exceeding the configured limit" do
+        state = XMPP::SMState.new
+        2.times { |i| state.queue_stanza("<message id='#{i}'/>", 2) }
+
+        expect_raises(XMPP::SendQueueFullError, /queue is full/) do
+          state.queue_stanza("<message id='overflow'/>", 2)
+        end
+        state.unacked_stanzas.size.should eq 2
+        state.outbound.should eq 2_u32
+      end
+    end
+
     describe "integration scenario" do
       it "handles complete send-ack-resend cycle" do
         state = XMPP::SMState.new(id: "session123")
@@ -135,8 +180,11 @@ describe "Stream Management - Enhanced Features" do
         to_resend[1].should contain("msg8")
         to_resend[2].should contain("msg9")
 
-        # After successful resend, clear queue
-        state.clear_queue
+        # Resending must not imply acknowledgement. The queue is retained until
+        # the resumed server advances h.
+        state.stanzas_to_resend
+        state.has_unacked_stanzas?.should be_true
+        state.process_ack(10_u32)
         state.has_unacked_stanzas?.should be_false
       end
     end
@@ -159,6 +207,15 @@ describe "Stream Management - Enhanced Features" do
 
       answer = XMPP::Stanza::SMAnswer.new(XML.parse(xml).first_element_child.not_nil!)
       answer.h.should eq 1000_u32
+    end
+
+    it "dispatches the XEP-0198 a nonza through the top-level parser" do
+      node = XML.parse("<a xmlns='urn:xmpp:sm:3' h='42'/>").first_element_child.not_nil!
+
+      packet = XMPP::Stanza::Parser.next_packet(node)
+
+      packet.should be_a(XMPP::Stanza::SMAnswer)
+      packet.as(XMPP::Stanza::SMAnswer).h.should eq 42_u32
     end
   end
 end

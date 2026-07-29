@@ -126,6 +126,7 @@ describe "XEP-0356: Privileged Entity" do
       privilege.perms[0].access.should eq "roster"
       privilege.perms[0].type.should eq "both"
       privilege.perms[0].push.should eq "true"
+      privilege.perms[0].push?.should be_true
 
       privilege.perms[1].access.should eq "message"
       privilege.perms[1].type.should eq "outgoing"

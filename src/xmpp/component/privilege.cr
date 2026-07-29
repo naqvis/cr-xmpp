@@ -224,7 +224,7 @@ module XMPP
             handle_privilege_advertisement(msg)
           end
         end
-      }).message
+      }).packet("message")
 
       # Handle roster pushes (if we have permission)
       @router.route(->(_s : Sender, p : Stanza::Packet) {

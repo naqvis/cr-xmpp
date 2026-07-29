@@ -14,10 +14,12 @@ module XMPP
     getter sm_state : SMState
     getter features : Stanza::StreamFeatures
     getter? tls_enabled : Bool = false
+    getter? resumed : Bool = false
     getter last_packet_id : Int32 = 0
 
     # Read/Write
     @stream_logger : IO
+    @stream_reader : XMLStreamReader
 
     # Service Discovery Info
     @disco_info : Stanza::DiscoInfo? = nil
@@ -30,6 +32,7 @@ module XMPP
       @sm_state = SMState.new
       @features = Stanza::StreamFeatures.new
       @stream_logger = STDOUT
+      @stream_reader = XMLStreamReader.new(@stream_logger)
     end
 
     # ameba:disable Metrics/CyclomaticComplexity
@@ -42,16 +45,17 @@ module XMPP
         io.sync = false
       end
       @stream_logger = StreamLogger.new(io, config.log_file)
+      @stream_reader = XMLStreamReader.new(@stream_logger, config.max_stanza_size)
       @features = open config.parsed_jid.domain
 
       ok = @features.tls_required
       if ok && !config.tls?
-        raise AuthenticationError.new "Server requires TLS session. Ensure you either 'tls' attribute of config to 'true'"
+        raise TLSUnavailableError.new("Server requires TLS but TLS is disabled in the client configuration")
       end
 
       _, ok = @features.does_start_tls
       if config.tls? && !ok
-        raise AuthenticationError.new "You requested TLS session, but Server doesn't support TLS"
+        raise TLSUnavailableError.new("TLS was requested but the XMPP server does not advertise STARTTLS")
       end
 
       # starttls
@@ -60,7 +64,7 @@ module XMPP
         if tls_conn.is_a?(IO::Buffered)
           tls_conn.sync = false
         end
-        raise AuthenticationError.new "Failed to negotiate TLS session" unless tls_enabled?
+        raise TLSNegotiationError.new("Failed to negotiate TLS session") unless tls_enabled?
       else
         tls_conn = io
       end
@@ -71,7 +75,10 @@ module XMPP
       reset(tls_conn, tls_conn, config) unless @features.sasl2_authentication
 
       # attemp resumption
-      return if resume config
+      if resume config
+        @resumed = true
+        return
+      end
 
       # otherwise, bind resource and 'start' XMPP session
       bind config
@@ -104,20 +111,14 @@ module XMPP
     end
 
     private def set_stream_logger(conn, new_conn, o)
-      @stream_logger = StreamLogger.new(new_conn, o.log_file) unless conn == new_conn
+      unless conn == new_conn
+        @stream_logger = StreamLogger.new(new_conn, o.log_file)
+        @stream_reader = XMLStreamReader.new(@stream_logger, o.max_stanza_size)
+      end
     end
 
     protected def read_resp
-      b = Bytes.new(BUFFER_SIZE)
-      n = @stream_logger.read(b)
-      raise ConnectionClosed.new "connection closed" if @stream_logger.closed? || n == 0
-      xml = String.new(b[0, n])
-      document = XML.parse(xml)
-      if r = document.first_element_child
-        r
-      else
-        raise "Invalid response from server: #{document.to_xml}"
-      end
+      @stream_reader.read_node
     end
 
     protected def send(xml)
@@ -149,17 +150,34 @@ module XMPP
         begin
           Stanza::TLSProceed.new read_resp
         rescue ex
-          raise AuthenticationError.new "expecting starttls proceed: #{ex.message}"
+          raise TLSNegotiationError.new("Expected STARTTLS proceed response: #{ex.message}")
         end
         # Conert existing connection to TLS
         context = OpenSSL::SSL::Context::Client.new
-
-        context.verify_mode = OpenSSL::SSL::VerifyMode::None if o.skip_cert_verify?
+        context.add_options(
+          OpenSSL::SSL::Options::NO_TLS_V1 |
+          OpenSSL::SSL::Options::NO_TLS_V1_1
+        )
+        if ca_certificates = o.tls_ca_certificates
+          context.ca_certificates = ca_certificates
+        end
+        if o.skip_cert_verify?
+          Logger.warn "TLS certificate verification is disabled; this connection is vulnerable to impersonation"
+          context.verify_mode = OpenSSL::SSL::VerifyMode::None
+        end
         begin
-          tls_conn = OpenSSL::SSL::Socket::Client.new(socket, context)
+          hostname = o.skip_cert_verify? ? nil : o.parsed_jid.domain
+          tls_conn = OpenSSL::SSL::Socket::Client.new(socket, context, hostname: hostname)
           tls_conn.sync = true
-        rescue ex
+        rescue ex : OpenSSL::SSL::Error
           # don't leak the TCP socket when the SSL connection failed
+          socket.close
+          message = ex.message || "TLS handshake failed"
+          if !o.skip_cert_verify? && tls_verification_failure?(message)
+            raise TLSVerificationError.new("TLS certificate or hostname verification failed: #{message}")
+          end
+          raise TLSNegotiationError.new("TLS handshake failed: #{message}")
+        rescue ex
           socket.close
           raise ex
         end
@@ -168,7 +186,7 @@ module XMPP
         return tls_conn
       end
       # If we do not allow cleartext connections, make it explicit that server do not support starttls
-      raise AuthenticationError.new "XMPP server does not advertise support for starttls" if o.tls?
+      raise TLSUnavailableError.new("XMPP server does not advertise STARTTLS") if o.tls?
 
       # starttls is not supported => we do not upgrade the connection
       socket
@@ -177,7 +195,8 @@ module XMPP
     private def auth(o)
       # Pass TLS socket if available for channel binding support
       tls_socket = @stream_logger.is_a?(StreamLogger) ? @stream_logger.as(StreamLogger).tls_socket : nil
-      auth = AuthHandler.new(@stream_logger, @features, o.password, o.parsed_jid, tls_socket)
+      tls_verified = !tls_socket.nil? && !o.skip_cert_verify?
+      auth = AuthHandler.new(@stream_logger, @stream_reader, @features, o.password, o.parsed_jid, tls_socket, tls_verified)
       auth.authenticate o.sasl_auth_order
     end
 
@@ -194,9 +213,11 @@ module XMPP
         p = packet.as(Stanza::SMResumed)
         if p.prev_id != @sm_state.id
           @sm_state = SMState.new
-          raise "session resumption: mismatched id"
+          raise StreamManagementError.new("session resumption returned a mismatched id")
         end
-        @sm_state.inbound = p.h
+        # The server's h acknowledges stanzas handled from this client; it is
+        # unrelated to our inbound counter.
+        @sm_state.process_ack(p.h)
         @sm_state.touch # Update timestamp on successful resume
         return true
       elsif packet.is_a?(Stanza::SMFailed)
@@ -206,7 +227,7 @@ module XMPP
         @sm_state.error = error_msg
         Logger.debug error_msg
       else
-        raise "unexpected reply to SM resume"
+        raise StreamManagementError.new("unexpected reply to stream-management resume")
       end
       false
     end
@@ -224,13 +245,13 @@ module XMPP
       iq = Stanza::IQ.new read_resp
 
       # Validate bind response
-      raise "bind response must be type 'result', got: #{iq.type}" unless iq.type == "result"
+      raise ProtocolError.new("bind response must be type 'result', got: #{iq.type}") unless iq.type == "result"
 
       if payload = iq.payload.as?(Stanza::Bind)
-        raise "bind response missing JID" if payload.jid.blank?
+        raise ProtocolError.new("bind response missing JID") if payload.jid.blank?
         @bind_jid = payload.jid # our local id (with possibly randomly generated resource)
       else
-        raise "iq bind result missing or invalid payload"
+        raise ProtocolError.new("IQ bind result missing or invalid payload")
       end
     end
 
@@ -243,7 +264,7 @@ module XMPP
         begin
           Stanza::IQ.new read_resp
         rescue ex
-          raise "expecting iq result after session open: #{ex.message}"
+          raise ProtocolError.new("expected IQ result after session open: #{ex.message}")
         end
       end
     end
@@ -271,7 +292,7 @@ module XMPP
         @sm_state.error = error_msg
         Logger.warn error_msg
       else
-        raise "unexpected reply to SM enable"
+        raise StreamManagementError.new("unexpected reply to stream-management enable")
       end
     end
 
@@ -283,9 +304,29 @@ module XMPP
       iq.to = o.parsed_jid.domain
       iq.from = o.parsed_jid.to_s
       iq.disco_info
-      send iq.to_xml
+      xml = iq.to_xml
+      stream_managed = !@sm_state.id.blank?
+      # Stream management is enabled before this synchronous discovery
+      # exchange. Account for both directions even though the Client receiver
+      # and its ordinary send tracker are not running yet.
+      @sm_state.queue_stanza(xml) if stream_managed
+      send xml
       iq = Stanza::IQ.new read_resp
+      if stream_managed
+        @sm_state.inbound &+= 1_u32
+        # Receiving the correlated IQ result proves that the server handled
+        # this request. Advance the local acknowledgement baseline so later
+        # XEP-0198 h values retain their correct sequence numbers.
+        @sm_state.process_ack(@sm_state.outbound)
+      end
       @disco_info = iq.payload.as?(Stanza::DiscoInfo)
+    end
+
+    private def tls_verification_failure?(message : String) : Bool
+      normalized = message.downcase
+      normalized.includes?("certificate verify") ||
+        normalized.includes?("hostname") ||
+        normalized.includes?("does not match")
     end
   end
 end

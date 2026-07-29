@@ -14,6 +14,7 @@ module XMPP::Stanza
     property start_tls : TLSStartTLS? = nil
     property mechanisms : SASLMechanisms? = nil
     property sasl2_authentication : SASL2Authentication? = nil
+    property sasl_channel_binding : SASLChannelBinding? = nil
     property bind : Bind? = nil
     property stream_management : StreamManagement? = nil
     # Obsolete
@@ -44,6 +45,7 @@ module XMPP::Stanza
         when {TLSStartTLS.xml_name.local, TLSStartTLS.xml_name.space}                 then cls.start_tls = TLSStartTLS.new(child)
         when {SASLMechanisms.xml_name.local, SASLMechanisms.xml_name.space}           then cls.mechanisms = SASLMechanisms.new(child)
         when {SASL2Authentication.xml_name.local, SASL2Authentication.xml_name.space} then cls.sasl2_authentication = SASL2Authentication.new(child)
+        when {SASLChannelBinding.xml_name.local, SASLChannelBinding.xml_name.space}   then cls.sasl_channel_binding = SASLChannelBinding.new(child)
         when {Bind.xml_name.local, Bind.xml_name.space}                               then cls.bind = Bind.new(child)
         when {StreamManagement.xml_name.local, StreamManagement.xml_name.space}       then cls.stream_management = StreamManagement.new(child)
         when {StreamSession.xml_name.local, StreamSession.xml_name.space}             then cls.session = StreamSession.new(child)
@@ -63,6 +65,7 @@ module XMPP::Stanza
         start_tls.try &.to_xml xml
         mechanisms.try &.to_xml xml
         sasl2_authentication.try &.to_xml xml
+        sasl_channel_binding.try &.to_xml xml
         bind.try &.to_xml xml
         stream_management.try &.to_xml xml
         session.try &.to_xml xml

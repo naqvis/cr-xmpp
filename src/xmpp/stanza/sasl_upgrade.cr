@@ -268,6 +268,7 @@ module XMPP::Stanza
     include Packet
     class_getter xml_name : XMLName = XMLName.new(NS_SASL2, "success")
     property authorization_identifier : String = ""
+    property additional_data : String = ""
     property body : String = ""
 
     def self.new(node : XML::Node)
@@ -275,6 +276,8 @@ module XMPP::Stanza
       cls = new()
       node.children.select(&.element?).each do |child|
         case child.name
+        when "additional-data"
+          cls.additional_data = child.content
         when "authorization-identifier"
           cls.authorization_identifier = child.content
         end
@@ -285,6 +288,7 @@ module XMPP::Stanza
 
     def to_xml(xml : XML::Builder)
       xml.element(@@xml_name.local, xmlns: @@xml_name.space) do
+        xml.element("additional-data") { xml.text additional_data } unless additional_data.blank?
         if !authorization_identifier.blank?
           xml.element("authorization-identifier") { xml.text authorization_identifier }
         elsif !body.blank?

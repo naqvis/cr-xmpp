@@ -19,6 +19,7 @@ module XMPP
 
     # X-SCRAM_SHA_X Auth - https://wiki.xmpp.org/web/SASL_and_SCRAM-SHA-1
     # With optional channel binding support (RFC 5802, RFC 9266)
+    # ameba:disable Metrics/CyclomaticComplexity
     def auth_scram_sha(name, algorithm, use_channel_binding : Bool)
       nonce = nonce(16)
 
@@ -29,7 +30,8 @@ module XMPP
 
       if use_channel_binding
         if tls_sock = @tls_socket
-          if binding = ChannelBinding.get_channel_binding(tls_sock)
+          advertised = @features.sasl_channel_binding.try(&.types) || [] of String
+          if binding = ChannelBinding.get_channel_binding(tls_sock, advertised)
             cb_type, cb_data = binding
             # GS2 header with channel binding: "p=cb-type,,"
             gs2_header = "p=#{cb_type},,"
@@ -50,21 +52,24 @@ module XMPP
       val = Stanza::Parser.next_packet read_resp
       if val.is_a?(Stanza::SASLChallenge)
         body = val.as(Stanza::SASLChallenge).body
-        server_resp = Base64.decode_string(body)
-        puts "Server Respnose: #{server_resp}"
-        challenge = parse_scram_challenge(body, nonce)
-        puts "algorithm: #{algorithm}, challenge: #{challenge}"
-        resp, server_sig = scram_response(msg, server_resp, challenge, algorithm, gs2_header, cb_data)
+        mechanisms = @features.mechanisms.try(&.mechanism) || [] of String
+        server_first = parse_scram_challenge(body, nonce, algorithm, mechanisms)
+        resp, server_sig = scram_response(
+          msg,
+          server_first.raw,
+          server_first.attributes,
+          algorithm,
+          gs2_header,
+          cb_data
+        )
 
         send Stanza::SASLResponse.new(resp)
         val = Stanza::Parser.next_packet read_resp
         if val.is_a?(Stanza::SASLSuccess)
           # we are good
           body = val.as(Stanza::SASLSuccess).body
-          sig = Base64.decode_string(body)
-          raise AuthenticationError.new "Server returned invalid signature on success" unless sig.starts_with?("v=")
-          raise AuthenticationError.new "Server returned signature mismatch." unless sig[2..] == server_sig
-          Logger.info("#{name} - Auth successful: #{sig}")
+          verify_scram_server_final!(body, server_sig)
+          Logger.info("#{name} - Auth successful")
         elsif val.is_a?(Stanza::SASLFailure)
           v = val.as(Stanza::SASLFailure)
           raise AuthenticationError.new "#{name} - auth failure: #{v.any.try &.to_xml}"
@@ -80,97 +85,42 @@ module XMPP
       end
     end
 
-    private def hash_func(algorithm)
-      if algorithm.sha512?
-        f = "SHA512"
-      elsif algorithm.sha256?
-        f = "SHA256"
-      else
-        f = "SHA1"
-      end
-      OpenSSL::Digest.new(f)
-    end
-
     private def scram_response(initial_msg, server_resp, challenge, algorithm, gs2_header, cb_data : Bytes?)
-      # Channel binding data: base64(gs2-header || cb-data)
-      if cb_data
-        cb_input = gs2_header.to_slice + cb_data
-      else
-        cb_input = gs2_header.to_slice
-      end
-      cb_b64 = Base64.strict_encode(cb_input)
-
-      bare_msg = "c=#{cb_b64},r=#{challenge["r"]}"
-      server_salt = Base64.decode(challenge["s"])
-      hasher = hash_func(algorithm)
-      puts "key_size: #{hasher.digest_size},   server_salt: #{server_salt}"
-      salted_pwd = OpenSSL::PKCS5.pbkdf2_hmac(secret: @password, salt: server_salt, iterations: challenge["i"].to_i32,
-        algorithm: algorithm, key_size: hasher.digest_size)
-      client_key = OpenSSL::HMAC.digest(algorithm: algorithm, key: salted_pwd, data: "Client Key")
-
-      # stored_key = OpenSSL::SHA1.hash(client_key.to_unsafe, LibC::SizeT.new(client_key.bytesize))
-      hasher.update(client_key)
-      stored_key = hasher.final
-
-      auth_msg = "#{initial_msg},#{server_resp},#{bare_msg}"
-      client_sig = OpenSSL::HMAC.digest(algorithm: algorithm, key: stored_key, data: auth_msg)
-      client_proof = xor(client_key, client_sig)
-
-      server_key = OpenSSL::HMAC.digest(algorithm: algorithm, key: salted_pwd, data: "Server Key")
-      server_sig = OpenSSL::HMAC.digest(algorithm: algorithm, key: server_key, data: auth_msg)
-
-      final_msg = "#{bare_msg},p=#{Base64.strict_encode(client_proof)}"
-      {Base64.strict_encode(final_msg), Base64.strict_encode(server_sig)}
+      response = SCRAM.calculate_response(
+        @password,
+        initial_msg,
+        server_resp,
+        challenge,
+        algorithm,
+        gs2_header,
+        cb_data
+      )
+      {response.encoded, response.server_signature}
     end
 
-    private def parse_scram_challenge(challenge, nonce)
-      value = Base64.decode_string(challenge)
-      res = Hash(String, String).new
-      value.split(",").each do |v|
-        pair = v.split("=")
-        key, val = pair[0], v[2..]
-        raise AuthenticationError.new "Server sent duplicate SCRAM attribute '#{key}'" if res.has_key?(key)
-        res[key] = val
-      end
-      # RFC 5802:
-      # m: This attribute is reserved for future extensibility.  In this
-      # version of SCRAM, its presence in a client or a server message
-      # MUST cause authentication failure when the attribute is parsed by
-      # the other end.
-      raise "Server sent reserved attribute 'm'" if res.has_key?("m")
-      if i = res["i"]?
-        raise "Server sent invalid iteration count" if i.to_i?.nil?
-      else
-        raise "Server didn't sent iteration count"
-      end
-      if salt = res["s"]?
-        raise "Server sent empty salt" if salt.blank?
-      else
-        raise "Server didn't sent salt"
-      end
-      if r = res["r"]?
-        raise "Server sent nonce didn't match" unless r.starts_with?(nonce)
-      else
-        raise "Server didn't sent nonce"
-      end
+    private def parse_scram_challenge(challenge, nonce, algorithm, mechanisms : Array(String))
+      server_first = SCRAM.parse_server_first(challenge, nonce)
+      attributes = server_first.attributes
       TLSChannelBindingDowngradeProtection.verify!(
-        res["t"]?,
+        attributes["t"]?,
         @tls_socket.try &.tls_version
       )
-      res
+      ScramDowngradeProtection.verify!(
+        attributes["h"]?,
+        mechanisms,
+        @features.sasl_channel_binding.try(&.types) || [] of String,
+        algorithm
+      )
+      server_first
     end
 
-    private def xor(a : Bytes, b : Bytes)
-      if a.bytesize > b.bytesize
-        b.map_with_index { |v, i| v ^ a[i] }
-      else
-        a.map_with_index { |v, i| v ^ b[i] }
-      end
+    private def verify_scram_server_final!(encoded : String, expected_signature : String)
+      SCRAM.verify_server_final!(encoded, expected_signature)
     end
 
     private def escape(str : String)
       # Escape "=" and ","
-      str.gsub("=", "=3D").gsub(",", "=2C")
+      SCRAM.prepare(str, "username").gsub("=", "=3D").gsub(",", "=2C")
     end
   end
 end

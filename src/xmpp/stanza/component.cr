@@ -193,6 +193,10 @@ module XMPP::Stanza
     property push : String = ""                                           # true, false (for roster)
     property namespaces : Array(PermNamespace) = Array(PermNamespace).new # for IQ
 
+    def push? : Bool
+      @push.downcase == "true"
+    end
+
     def self.new(node : XML::Node)
       cls = new()
       raise "Invalid node(#{node.name}, expecting #{cls.xml_name}" unless node.name == cls.xml_name

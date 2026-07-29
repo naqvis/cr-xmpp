@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(
+  CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." >/dev/null &&
+    pwd -P
+)"
+cd -- "$ROOT_DIR"
+
+export CRYSTAL_CACHE_DIR="${CRYSTAL_CACHE_DIR:-/tmp/cr-xmpp-crystal-cache}"
+COMPOSE_FILE="docker-compose.yml"
+INTEGRATION_PROJECT="cr-xmpp-integration"
+CI_INTEGRATION_PORT=""
+CI_COMPONENT_PORT=""
+CI_COMPOSE_ARGS=()
+
+run_unit() {
+  if ! shards check; then
+    shards install
+  fi
+  shards check
+  crystal tool format --check src spec
+  crystal spec
+  CRYSTAL_WORKERS=4 crystal spec
+  crystal docs
+}
+
+cleanup_integration() {
+  local status=$?
+  if [[ $status -ne 0 ]]; then
+    XMPP_PORT="$CI_INTEGRATION_PORT" XMPP_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+      "${CI_COMPOSE_ARGS[@]}" logs --no-color || true
+  fi
+  XMPP_PORT="$CI_INTEGRATION_PORT" XMPP_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+    "${CI_COMPOSE_ARGS[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  return "$status"
+}
+
+run_integration() {
+  CI_INTEGRATION_PORT="${XMPP_INTEGRATION_PORT:-55222}"
+  CI_COMPONENT_PORT="${XMPP_INTEGRATION_COMPONENT_PORT:-55535}"
+  CI_COMPOSE_ARGS=(docker compose --project-name "$INTEGRATION_PROJECT" -f "$COMPOSE_FILE")
+  ./docker/prosody/generate-certs.sh
+  XMPP_PORT="$CI_INTEGRATION_PORT" XMPP_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+    "${CI_COMPOSE_ARGS[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  trap cleanup_integration EXIT
+
+  XMPP_PORT="$CI_INTEGRATION_PORT" XMPP_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+    "${CI_COMPOSE_ARGS[@]}" up --detach --wait
+  XMPP_PORT="$CI_INTEGRATION_PORT" XMPP_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+    "${CI_COMPOSE_ARGS[@]}" exec -T prosody \
+    prosodyctl register test localhost test
+
+  XMPP_INTEGRATION_PORT="$CI_INTEGRATION_PORT" \
+    XMPP_INTEGRATION_COMPONENT_PORT="$CI_COMPONENT_PORT" \
+    CRYSTAL_WORKERS=4 crystal spec spec/integration/live_server.cr
+}
+
+case "${1:-all}" in
+  unit)
+    run_unit
+    ;;
+  integration)
+    run_integration
+    ;;
+  all)
+    run_unit
+    run_integration
+    ;;
+  *)
+    echo "Usage: $0 [unit|integration|all]" >&2
+    exit 64
+    ;;
+esac

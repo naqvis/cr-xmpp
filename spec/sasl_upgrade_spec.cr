@@ -385,6 +385,21 @@ describe XMPP::Stanza::SASL2Success do
 
       success.authorization_identifier.should eq "user@example.org"
     end
+
+    it "parses SCRAM server-final data" do
+      xml = <<-XML
+        <success xmlns='urn:xmpp:sasl:2'>
+          <additional-data>dj1ybUY5cHFWOFM3c3VBb1pXamE0ZEpSa0ZzS1E9</additional-data>
+          <authorization-identifier>user@example.org</authorization-identifier>
+        </success>
+      XML
+
+      node = XML.parse(xml).first_element_child.not_nil!
+      success = XMPP::Stanza::SASL2Success.new(node)
+
+      success.additional_data.should eq "dj1ybUY5cHFWOFM3c3VBb1pXamE0ZEpSa0ZzS1E9"
+      success.authorization_identifier.should eq "user@example.org"
+    end
   end
 
   describe "to_xml" do

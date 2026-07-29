@@ -21,7 +21,8 @@ module XMPP
         return false unless payload
 
         # Check if payload namespace matches
-        return false unless payload.namespace == @namespace
+        namespace = payload.responds_to?(:namespace) ? payload.namespace : ""
+        return false unless namespace == @namespace
 
         # If there are filtering attributes, check them
         if @attributes.empty?
@@ -62,7 +63,8 @@ module XMPP
         payload = iq.payload
         return false unless payload
 
-        delegation = @delegations[payload.namespace]?
+        namespace = payload.responds_to?(:namespace) ? payload.namespace : ""
+        delegation = @delegations[namespace]?
         return false unless delegation
 
         delegation.matches?(stanza)
@@ -103,9 +105,12 @@ module XMPP
       original_iq = original_stanza.as(Stanza::IQ)
 
       # Verify this is a delegated namespace we handle
-      if original_iq.payload && @delegation_manager.delegated?(original_iq.payload.namespace)
-        Logger.debug "Processing delegated stanza for namespace: #{original_iq.payload.namespace}"
-        return original_iq
+      if payload = original_iq.payload
+        namespace = payload_namespace(payload)
+        if @delegation_manager.delegated?(namespace)
+          Logger.debug "Processing delegated stanza for namespace: #{namespace}"
+          return original_iq
+        end
       end
 
       nil
@@ -141,7 +146,7 @@ module XMPP
             handle_delegation_advertisement(delegation.as(Stanza::Delegation))
           end
         end
-      }).message
+      }).packet("message")
 
       # Handle delegated stanzas (in IQs)
       @router.route(->(s : Sender, p : Stanza::Packet) {
@@ -159,7 +164,9 @@ module XMPP
     # Override this method to handle delegated IQs
     # Default implementation logs and returns service-unavailable
     def handle_delegated_iq(sender : Sender, wrapper_iq : Stanza::IQ, original_iq : Stanza::IQ)
-      Logger.warn "Received delegated IQ but no handler implemented for namespace: #{original_iq.payload.try &.namespace}"
+      namespace = original_iq.payload.try { |payload| payload_namespace(payload) }
+      namespace = "unknown" if namespace.nil? || namespace.blank?
+      Logger.warn "Received delegated IQ but no handler implemented for namespace: #{namespace}"
 
       # Send error response
       error_iq = Stanza::IQ.new
@@ -171,6 +178,14 @@ module XMPP
       # Wrap and send
       response = wrap_delegated_response(wrapper_iq.id, error_iq, wrapper_iq.from)
       send(response)
+    end
+
+    private def payload_namespace(payload) : String
+      if payload.responds_to?(:namespace)
+        payload.namespace
+      else
+        ""
+      end
     end
   end
 end

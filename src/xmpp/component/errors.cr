@@ -2,12 +2,18 @@ module XMPP
   # XEP-0114: Jabber Component Protocol - Error Handling
 
   # Base exception for component errors
-  class ComponentError < Exception
+  class ComponentError < ConnectionError
+  end
+
+  class PermanentComponentError < ComponentError
+    def retryable? : Bool
+      false
+    end
   end
 
   # XEP-0114: Conflict error
   # The component JID is already connected
-  class ComponentConflictError < ComponentError
+  class ComponentConflictError < PermanentComponentError
     def initialize(message = "Component JID is already connected")
       super(message)
     end
@@ -15,21 +21,21 @@ module XMPP
 
   # XEP-0114: Host unknown error
   # The hostname is not recognized by the server
-  class ComponentHostUnknownError < ComponentError
+  class ComponentHostUnknownError < PermanentComponentError
     def initialize(host : String)
       super("Host '#{host}' is not recognized by the server")
     end
   end
 
   # XEP-0114: Authentication failed
-  class ComponentAuthenticationError < ComponentError
+  class ComponentAuthenticationError < PermanentComponentError
     def initialize(message = "Component authentication failed")
       super(message)
     end
   end
 
   # XEP-0114: Invalid namespace
-  class ComponentInvalidNamespaceError < ComponentError
+  class ComponentInvalidNamespaceError < PermanentComponentError
     def initialize(message = "Invalid namespace in component stream")
       super(message)
     end

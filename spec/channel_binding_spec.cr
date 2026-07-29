@@ -1,5 +1,38 @@
 require "./spec_helper"
 
+describe XMPP::Stanza::SASLChannelBinding do
+  it "parses the standalone XEP-0440 stream feature" do
+    xml = <<-XML
+      <stream:features xmlns:stream='http://etherx.jabber.org/streams'>
+        <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+          <mechanism>SCRAM-SHA-256-PLUS</mechanism>
+        </mechanisms>
+        <sasl-channel-binding xmlns='urn:xmpp:sasl-cb:0'>
+          <channel-binding type='tls-server-end-point'/>
+          <channel-binding type='tls-exporter'/>
+        </sasl-channel-binding>
+      </stream:features>
+    XML
+
+    node = XML.parse(xml).first_element_child.not_nil!
+    feature = XMPP::Stanza::StreamFeatures.new(node).sasl_channel_binding.not_nil!
+
+    feature.types.should eq ["tls-server-end-point", "tls-exporter"]
+    feature.supports?("tls-exporter").should be_true
+  end
+
+  it "round-trips advertised channel-binding types" do
+    feature = XMPP::Stanza::SASLChannelBinding.new
+    feature.types = ["tls-exporter", "tls-server-end-point"]
+
+    xml = XML.build { |builder| feature.to_xml(builder) }
+
+    xml.should contain("xmlns=\"urn:xmpp:sasl-cb:0\"")
+    xml.should contain("type=\"tls-exporter\"")
+    xml.should contain("type=\"tls-server-end-point\"")
+  end
+end
+
 describe XMPP::ChannelBinding do
   describe "Type" do
     it "converts to string correctly" do
@@ -81,6 +114,50 @@ describe XMPP::AuthMechanism do
 end
 
 describe XMPP::ScramDowngradeProtection do
+  describe "XEP-0474 hash verification" do
+    it "matches the specification's SHA-1 example" do
+      hash = XMPP::ScramDowngradeProtection.calculate_hash(
+        ["SCRAM-SHA-1", "SCRAM-SHA-1-PLUS"],
+        ["tls-server-end-point", "tls-exporter"],
+        OpenSSL::Algorithm::SHA1
+      )
+
+      hash.should eq "G6k/rBLDqgOhRRaCuuatSDFkJ08="
+    end
+
+    it "uses octet ordering and is independent of advertisement order" do
+      first = XMPP::ScramDowngradeProtection.calculate_hash(
+        ["SCRAM-SHA-512", "SCRAM-SHA-256"],
+        ["tls-server-end-point", "tls-exporter"],
+        OpenSSL::Algorithm::SHA256
+      )
+      second = XMPP::ScramDowngradeProtection.calculate_hash(
+        ["SCRAM-SHA-256", "SCRAM-SHA-512"],
+        ["tls-exporter", "tls-server-end-point"],
+        OpenSSL::Algorithm::SHA256
+      )
+
+      first.should eq second
+    end
+
+    it "rejects a modified mechanism or channel-binding list" do
+      server_hash = XMPP::ScramDowngradeProtection.calculate_hash(
+        ["SCRAM-SHA-256", "SCRAM-SHA-256-PLUS"],
+        ["tls-exporter"],
+        OpenSSL::Algorithm::SHA256
+      )
+
+      expect_raises(XMPP::AuthenticationError, /downgrade detected/) do
+        XMPP::ScramDowngradeProtection.verify!(
+          server_hash,
+          ["SCRAM-SHA-256"],
+          ["tls-server-end-point"],
+          OpenSSL::Algorithm::SHA256
+        )
+      end
+    end
+  end
+
   describe "check_downgrade" do
     it "detects potential downgrade when PLUS variant is available" do
       available = ["SCRAM-SHA-256", "SCRAM-SHA-256-PLUS"]

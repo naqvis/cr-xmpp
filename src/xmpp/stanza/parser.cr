@@ -1,4 +1,6 @@
 module XMPP::Stanza
+  class ParseError < XMPP::ProtocolError; end
+
   module Parser
     extend self
 
@@ -15,7 +17,7 @@ module XMPP::Stanza
       ns = node.namespaces.values.join(",")
       xmlns = node.namespaces["xmlns"]? || ""
       if !node.namespaces.has_value?(NS_STREAM) || node.name != "stream"
-        raise "xmpp: expected <stream> but got <#{node.name}> in #{ns}"
+        raise ParseError.new("xmpp: expected <stream> but got <#{node.name}> in #{ns}")
       end
 
       # Parse XMPP stream attributes
@@ -42,7 +44,7 @@ module XMPP::Stanza
       when NS_COMPONENT         then decode_component node
       when NS_STREAM_MANAGEMENT then SMFeatureHandler.parse node
       else
-        raise "unknown namespace #{ns} <#{node.name}>"
+        raise ParseError.new("unknown namespace #{ns} <#{node.name}>")
       end
     end
 
@@ -52,7 +54,7 @@ module XMPP::Stanza
       when "error"    then StreamError.new node
       when "features" then StreamFeatures.new node
       else
-        raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
+        raise ParseError.new("unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>")
       end
     end
 
@@ -64,7 +66,7 @@ module XMPP::Stanza
       when "success"   then SASLSuccess.new node
       when "failure"   then SASLFailure.new node
       else
-        raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
+        raise ParseError.new("unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>")
       end
     end
 
@@ -79,7 +81,7 @@ module XMPP::Stanza
       when "task-data"    then SASL2TaskData.new node
       when "success"      then SASL2Success.new node
       else
-        raise "unexpected SASL2 packet #{node.namespace.try &.href} <#{node.name}>"
+        raise ParseError.new("unexpected SASL2 packet #{node.namespace.try &.href} <#{node.name}>")
       end
     end
 
@@ -90,7 +92,7 @@ module XMPP::Stanza
       when "presence" then Presence.new node
       when "iq"       then IQ.new node
       else
-        raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
+        raise ParseError.new("unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>")
       end
     end
 
@@ -102,7 +104,7 @@ module XMPP::Stanza
       when "presence"  then Presence.new node
       when "iq"        then IQ.new node
       else
-        raise "unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>"
+        raise ParseError.new("unexpected XMPP packet #{node.namespace.try &.href} <#{node.name}>")
       end
     end
   end

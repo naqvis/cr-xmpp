@@ -20,12 +20,12 @@ module XMPP
           handle_success
         elsif val.is_a?(Stanza::SASLFailure)
           v = val.as(Stanza::SASLFailure)
-          raise "digest-md5 - auth failure: #{v.any.try &.to_xml}"
+          raise AuthenticationError.new("digest-md5 - auth failure: #{v.any.try &.to_xml}")
         else
-          raise "digest-md5 - expected SASL success or failure, got #{val.name}"
+          raise AuthenticationError.new("digest-md5 - expected SASL success or failure, got #{val.name}")
         end
       else
-        raise "digest-md5 - Expecting challenge, got : #{val.to_xml}"
+        raise AuthenticationError.new("digest-md5 - expecting challenge, got: #{val.to_xml}")
       end
     end
 
@@ -36,14 +36,18 @@ module XMPP
         pair = v.split("=")
         key, val = pair[0], pair[1].strip('"')
         next if key == "qop" && val != "auth"
-        raise "Invalid challenge. algorithm provided multiple times" if key == "algorithm" && res.has_key?("algorithm")
-        raise "Invalid challenge. charset provided multiple times" if key == "charset" && res.has_key?("charset")
+        if key == "algorithm" && res.has_key?("algorithm")
+          raise AuthenticationError.new("Invalid DIGEST-MD5 challenge: algorithm provided multiple times")
+        end
+        if key == "charset" && res.has_key?("charset")
+          raise AuthenticationError.new("Invalid DIGEST-MD5 challenge: charset provided multiple times")
+        end
         res[key] = val
       end
       res["realm"] = @jid.domain unless res.has_key?("realm")
-      raise "Invalid challenge. nonce not found" unless res.has_key?("nonce")
-      raise "Invalid challenge. qop not found" unless res.has_key?("qop")
-      raise "Invalid challenge. algorithm not found" unless res.has_key?("algorithm")
+      raise AuthenticationError.new("Invalid DIGEST-MD5 challenge: nonce not found") unless res.has_key?("nonce")
+      raise AuthenticationError.new("Invalid DIGEST-MD5 challenge: qop not found") unless res.has_key?("qop")
+      raise AuthenticationError.new("Invalid DIGEST-MD5 challenge: algorithm not found") unless res.has_key?("algorithm")
       res
     end
 

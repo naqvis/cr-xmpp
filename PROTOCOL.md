@@ -1,95 +1,85 @@
-# cr-xmpp Protocol Support
+# Protocol support
 
-Here are listed the XMPP Protocol Extensions that cr-xmpp supports, as well as their implementation version.
+This file is the protocol inventory for `cr-xmpp`. It distinguishes integrated
+library behavior from stanza/data-model support so that “supported” does not
+overstate what the shard does automatically.
 
-# XMPP Core
+## Status definitions
 
-- RFC-6120: Extensible Messaging and Presence Protocol (XMPP): Core
-- RFC-6121: Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and Presence
+- **Integrated** — used directly by the client, session, authentication,
+  stream-management, router, or component workflow.
+- **API** — typed parsing/serialization is available, but applications must
+  drive the protocol workflow.
+- **Partial** — only the stated subset is implemented.
 
-# XMPP Extensions (Complete)
+## RFC support
 
-- XEP-0030: Service Discovery _v2.5.0_
-- XEP-0060: Publish-Subscribe _v1.30.0_ (subscriber operations, no owner namespace)
-- XEP-0066: Out of Band Data _v1.5.0_
-- XEP-0085: Chat State Notifications _v2.1_
-- XEP-0092: Software Version _v1.1_
-- XEP-0107: User Mood _v1.2.2_
-- XEP-0153: vCard-Based Avatars _v1.1_
-- XEP-0184: Message Delivery Receipts _v1.4.0_
-- XEP-0198: Stream Management _v1.6.1_ (with outbound tracking and automatic resend)
-- XEP-0199: XMPP Ping _v2.0.1_
-- XEP-0203: Delayed Delivery _v2.0_
-- XEP-0333: Chat Markers _v0.5.0_
-- XEP-0334: Message Processing Hints _v0.3.0_
-- XEP-0388: Extensible SASL Profile (SASL2) _v0.5.0_
-- XEP-0440: SASL Channel-Binding Type Capability _v0.2.0_
-- XEP-0474: SASL SCRAM Downgrade Protection _v0.3.0_
-- XEP-0480: SASL Upgrade Tasks _v0.2.0_
-- XEP-0515: TLS Channel-Binding Downgrade Protection _v0.1.0_
+| Standard | Status | Scope |
+| --- | --- | --- |
+| RFC 6120 — XMPP Core | Integrated | Client streams, STARTTLS, SASL, resource binding, stanzas, stream errors |
+| RFC 6121 — Instant Messaging and Presence | Integrated | Message/presence routing and roster payloads |
+| RFC 5802 — SCRAM-SHA-1 | Integrated | SCRAM exchange, server verification, and channel binding |
+| RFC 7677 — SCRAM-SHA-256 | Integrated | SCRAM-SHA-256 and SCRAM-SHA-256-PLUS |
+| RFC 4013 — SASLprep | Partial | NFKC normalization and prohibited-character checks used by SCRAM |
+| RFC 4505 — SASL ANONYMOUS | Optional | Available only through explicit legacy mechanism policy |
+| RFC 4616 — SASL PLAIN | Optional | Available only through explicit policy and certificate-verified TLS |
+| RFC 2831 — DIGEST-MD5 | Legacy | Available only through explicit legacy mechanism policy |
+| RFC 5929 — TLS Channel Bindings | Integrated | `tls-unique` and `tls-server-end-point` |
+| RFC 9266 — Channel Bindings for TLS 1.3 | Integrated | `tls-exporter` |
 
-# XMPP Extensions (Partial)
+## XEP support
 
-- XEP-0045: Multi-User Chat _v1.35.1_ (basic room joining only, no admin/config)
-- XEP-0114: Jabber Component Protocol _v1.6.1_ (no component dialback)
-- XEP-0355: Namespace Delegation _v0.5.0_ (component-side only)
-- XEP-0356: Privileged Entity _v0.3.0_ (component-side only)
+| XEP | Status | Implemented scope |
+| --- | --- | --- |
+| XEP-0030 — Service Discovery | Integrated | Client disco query plus component info/items responders and nodes |
+| XEP-0045 — Multi-User Chat | Partial | MUC presence and history payloads; no room administration/configuration |
+| XEP-0060 — Publish-Subscribe | API | Publish, retract, subscribe, unsubscribe, subscriptions, affiliations, and item retrieval |
+| XEP-0066 — Out of Band Data | API | Message payload parsing and serialization |
+| XEP-0071 — XHTML-IM | API | XHTML message body parsing and serialization |
+| XEP-0085 — Chat State Notifications | API | Active, composing, paused, inactive, and gone markers |
+| XEP-0092 — Software Version | API | IQ request/result payload |
+| XEP-0107 — User Mood | API | Mood values, validation, text, parsing, and serialization |
+| XEP-0114 — Jabber Component Protocol | Integrated | External-component connect/authenticate/send/receive; no component dialback |
+| XEP-0115 — Entity Capabilities | Partial | Presence capability payload parsing/serialization; no verification cache |
+| XEP-0118 — User Tune | API | Tune data model for PubSub/PEP payloads |
+| XEP-0153 — vCard-Based Avatars | API | Presence update payload |
+| XEP-0184 — Message Delivery Receipts | API | Receipt request and received markers |
+| XEP-0198 — Stream Management | Integrated | Enable/resume, bounded outbound tracking, acknowledgements, resend, and live cut/resume interoperability coverage |
+| XEP-0199 — XMPP Ping | Integrated | Ping payload, automatic replies, and keepalive use |
+| XEP-0203 — Delayed Delivery | API | Message and presence delay payloads |
+| XEP-0297 — Stanza Forwarding | API | Forwarded wrapper parsing/serialization |
+| XEP-0325 — IoT Control | Partial | Control `set`, fields, `getForm`, and `setResponse` data models |
+| XEP-0333 — Chat Markers | API | Markable, received, displayed, and acknowledged markers |
+| XEP-0334 — Message Processing Hints | API | Store, no-store, no-permanent-store, and no-copy hints |
+| XEP-0355 — Namespace Delegation | Partial | Component-side advertisements, delegated IQ unwrapping, and response wrapping |
+| XEP-0356 — Privileged Entity | Partial | Component-side permissions, roster helpers, and outgoing privileged messages |
+| XEP-0380 — Explicit Message Encryption | API | Encryption marker and encryption-namespace identifiers; no encryption engine |
+| XEP-0388 — Extensible SASL Profile (SASL2) | Integrated | Feature parsing and authentication flow with classic SASL fallback |
+| XEP-0440 — SASL Channel-Binding Type Capability | Integrated | Capability parsing, selection, and SCRAM-PLUS negotiation |
+| XEP-0474 — SASL SCRAM Downgrade Protection | Integrated | Signed mechanism/channel-binding downgrade verification |
+| XEP-0480 — SASL Upgrade Tasks | Integrated | SCRAM upgrade advertisement, task exchange, and hash generation |
+| XEP-0515 — TLS Channel-Binding Downgrade Protection | Integrated | Negotiated TLS-version verification in SCRAM |
 
-# XMPP Extensions (Planned - High Priority)
+## Non-standard extensions
 
-- XEP-0191: Blocking Command _v1.3.0_ (privacy, spam prevention)
-- XEP-0280: Message Carbons _v1.0.1_ (multi-device sync)
-- XEP-0313: Message Archive Management _v1.2.0_ (message history)
-- XEP-0352: Client State Indication _v1.0.0_ (battery optimization)
-- XEP-0359: Unique and Stable Stanza IDs _v0.7.0_ (deduplication)
-- XEP-0363: HTTP File Upload _v1.1.0_ (file sharing)
+- ejabberd `p1:ack`, `p1:push`, and `p1:rebind` stream-feature models.
+- Generic unknown XML payload preservation through `XMPP::Stanza::Node`.
 
-# XMPP Extensions (Planned - Medium Priority)
+## Not implemented
 
-- XEP-0084: User Avatar _v1.1.4_ (modern PEP-based avatars)
-- XEP-0115: Entity Capabilities _v1.6.0_ (performance optimization)
-- XEP-0308: Last Message Correction _v1.2.0_ (edit messages)
-- XEP-0357: Push Notifications _v0.4.1_ (mobile notifications)
-- XEP-0384: OMEMO Encryption _v0.8.3_ (end-to-end encryption)
-- XEP-0424: Message Retraction _v0.4.0_ (delete messages)
-- XEP-0444: Message Reactions _v0.3.0_ (emoji reactions)
-- XEP-0461: Message Replies _v0.2.0_ (message threading)
+The presence of a generic PubSub, forwarding, or encryption-marker model does
+not imply these separate protocols are implemented:
 
-# Others
-
-- RFC-5929: Channel Bindings for TLS (tls-server-end-point, tls-unique)
-- RFC-9266: Channel Bindings for TLS 1.3 (tls-exporter)
-
-# Implementation Notes
-
-**Total Support:**
-
-- Complete: 18 XEPs
-- Partial: 4 XEPs
-- Planned: 14 XEPs
-- Total: 36 protocols (2 RFCs + 34 XEPs)
-
-**Test Coverage:** 229 tests, all passing
-
-**Modern Features:**
-
-- SASL2 with inline features (bind, stream management)
-- Channel binding for enhanced security (SCRAM-PLUS)
-- Stream Management with automatic stanza resend
-- Enhanced PubSub with subscription management
-- Component support with delegation and privileges
-
-**Key Strengths:**
-
-- Modern authentication (SASL2, channel binding, downgrade protection)
-- Robust connection handling (Stream Management with outbound tracking)
-- Full component protocol support
-- Comprehensive PubSub implementation
-- Excellent test coverage
-
-**Main Gaps:**
-
-- Multi-device support (XEP-0280, XEP-0313) - highest priority
-- File sharing (XEP-0363)
-- Modern messaging UX (corrections, replies, reactions)
-- End-to-end encryption (XEP-0384)
+- XEP-0084: User Avatar
+- XEP-0191: Blocking Command
+- XEP-0280: Message Carbons
+- XEP-0308: Last Message Correction
+- XEP-0313: Message Archive Management
+- XEP-0352: Client State Indication
+- XEP-0357: Push Notifications
+- XEP-0359: Unique and Stable Stanza IDs
+- XEP-0363: HTTP File Upload
+- XEP-0384: OMEMO Encryption
+- XEP-0424: Message Retraction
+- XEP-0444: Message Reactions
+- XEP-0461: Message Replies

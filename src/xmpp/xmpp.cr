@@ -19,7 +19,17 @@ module XMPP
     abstract def connect
     abstract def resume(state : SMState)
     abstract def disconnect
-    abstract def event_handler=(handler : EventHandler)
+    abstract def event_handler=(handler : EventHandler?)
+
+    # Components and custom stream clients that do not implement XEP-0198
+    # retain the zero/false defaults.
+    def unacknowledged_stanza_count : Int32
+      0
+    end
+
+    def last_resume_succeeded? : Bool
+      false
+    end
   end
 end
 

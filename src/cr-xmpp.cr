@@ -16,9 +16,9 @@
 # preventing man-in-the-middle attacks.
 #
 # Supported channel binding types:
-# - tls-server-end-point (RFC 5929) - Fully implemented
-# - tls-unique (RFC 5929) - For TLS ≤ 1.2 (requires OpenSSL FFI)
-# - tls-exporter (RFC 9266) - For TLS 1.3 (requires OpenSSL FFI)
+# - tls-server-end-point (RFC 5929) - For TLS 1.2 and TLS 1.3
+# - tls-unique (RFC 5929) - For TLS 1.2 and earlier
+# - tls-exporter (RFC 9266) - For TLS 1.3
 #
 # SCRAM-PLUS mechanisms (with channel binding):
 # - SCRAM-SHA-512-PLUS (recommended)

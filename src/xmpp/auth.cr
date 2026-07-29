@@ -1,9 +1,10 @@
+require "./event_manager"
 require "./auth/*"
 require "./channel_binding"
 require "./stanza/sasl_upgrade"
 
 module XMPP
-  class AuthenticationError < Exception; end
+  class AuthenticationError < PermanentConnectionError; end
 
   enum AuthMechanism
     # SCRAM with channel binding (preferred)
@@ -33,6 +34,18 @@ module XMPP
       end
     end
 
+    # PLAIN exposes a reusable password to the authenticated peer and must
+    # therefore only be used over a verified TLS connection.
+    def requires_verified_tls? : Bool
+      plain?
+    end
+
+    # DIGEST-MD5 uses a challenge flow that is currently implemented only for
+    # classic SASL. The other compatibility mechanisms can use SASL2 directly.
+    def supported_by_sasl2? : Bool
+      !digest_md5?
+    end
+
     # Get the base mechanism without -PLUS suffix
     def base_mechanism : String
       to_s.sub("-PLUS", "")
@@ -43,19 +56,29 @@ module XMPP
   SASL_AUTH_ORDER = [
     AuthMechanism::SCRAM_SHA_512_PLUS, AuthMechanism::SCRAM_SHA_256_PLUS, AuthMechanism::SCRAM_SHA_1_PLUS,
     AuthMechanism::SCRAM_SHA_512, AuthMechanism::SCRAM_SHA_256, AuthMechanism::SCRAM_SHA_1,
-    AuthMechanism::DIGEST_MD5, AuthMechanism::PLAIN,
+  ]
+
+  # Explicit opt-in order for compatibility with servers that still require
+  # obsolete or cleartext-password SASL mechanisms.
+  LEGACY_SASL_AUTH_ORDER = SASL_AUTH_ORDER + [
+    AuthMechanism::DIGEST_MD5,
+    AuthMechanism::PLAIN,
     AuthMechanism::ANONYMOUS,
   ]
 
   private class AuthHandler
     @io : IO
+    @reader : XMLStreamReader
     @password : String
     @jid : JID
     @features : Stanza::StreamFeatures
     @tls_socket : OpenSSL::SSL::Socket::Client?
+    @tls_verified : Bool
 
-    def initialize(@io, @features, @password, @jid, @tls_socket = nil)
-      raise AuthenticationError.new "Server returned empty list of Authentication mechanisms" unless (@features.mechanisms.try &.mechanism.size || 0) > 0
+    def initialize(@io, @reader, @features, @password, @jid, @tls_socket = nil, @tls_verified = false)
+      sasl1_count = @features.mechanisms.try(&.mechanism.size) || 0
+      sasl2_count = @features.sasl2_authentication.try(&.mechanisms.size) || 0
+      raise AuthenticationError.new "Server returned empty list of Authentication mechanisms" unless sasl1_count > 0 || sasl2_count > 0
     end
 
     def authenticate(methods : Array(AuthMechanism))
@@ -64,16 +87,40 @@ module XMPP
         return authenticate_sasl2_if_supported(methods)
       end
 
-      # Fall back to legacy SASL
+      authenticate_legacy(methods)
+    end
+
+    private def authenticate_legacy(methods : Array(AuthMechanism))
       if mechanisms = @features.mechanisms.try &.mechanism
-        methods.each do |method|
-          if mechanisms.includes? method.to_s
-            return do_auth(method)
-          end
+        if method = select_mechanism(methods, mechanisms)
+          return do_auth(method)
         end
+        raise_insecure_plain_if_applicable(methods, mechanisms)
         raise AuthenticationError.new "None of the preferred Auth mechanism '[#{methods.join(",")}]' supported by server. Server supported mechanisms are [#{mechanisms.join(",")}]"
       else
         raise AuthenticationError.new "Server returned empty list of Authentication mechanisms"
+      end
+    end
+
+    private def select_mechanism(
+      methods : Array(AuthMechanism),
+      advertised : Array(String),
+      sasl2 = false,
+    ) : AuthMechanism?
+      methods.find do |method|
+        next false unless advertised.includes?(method.to_s)
+        next false if sasl2 && !method.supported_by_sasl2?
+        next false if method.requires_verified_tls? && !@tls_verified
+        next false if method.uses_channel_binding? && !channel_binding_available?
+        true
+      end
+    end
+
+    private def raise_insecure_plain_if_applicable(methods, advertised)
+      if !@tls_verified &&
+         methods.includes?(AuthMechanism::PLAIN) &&
+         advertised.includes?(AuthMechanism::PLAIN.to_s)
+        raise AuthenticationError.new "PLAIN authentication requires a verified TLS connection"
       end
     end
 
@@ -89,20 +136,18 @@ module XMPP
       when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram("sha256", true)
       when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram("sha512", true)
       else
-        raise AuthenticationError.new "Auth mechanism '#{method}' not implemented. Currently implemented mechanisms are [#{SASL_AUTH_ORDER.join(",")}]"
+        raise AuthenticationError.new "Auth mechanism '#{method}' not implemented. Currently implemented mechanisms are [#{LEGACY_SASL_AUTH_ORDER.join(",")}]"
       end
     end
 
+    private def channel_binding_available? : Bool
+      return false unless socket = @tls_socket
+      advertised = @features.sasl_channel_binding.try(&.types) || [] of String
+      !ChannelBinding.get_channel_binding(socket, advertised).nil?
+    end
+
     private def read_resp
-      b = Bytes.new(1024)
-      @io.read(b)
-      xml = String.new(b)
-      document = XML.parse(xml)
-      if r = document.first_element_child
-        r
-      else
-        raise "Invalid response from server: #{document.to_xml}"
-      end
+      @reader.read_node
     end
 
     private def send(xml : String)
@@ -128,9 +173,7 @@ module XMPP
     end
 
     private def nonce(n : Int32)
-      b = Bytes.new(n)
-      Random.new.random_bytes(b)
-      Base64.strict_encode(b)
+      Base64.strict_encode(Random::Secure.random_bytes(n))
     end
   end
 end

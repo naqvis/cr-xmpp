@@ -7,8 +7,9 @@ module XMPP::Stanza
     class_getter xml_name : XMLName = XMLName.new(NS_STREAM_MANAGEMENT, "sm")
 
     def self.new(node : XML::Node)
-      raise "Invalid node(#{node.name}, expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) &&
-                                                                        (node.name == @@xml_name.local)
+      unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
+        raise ParseError.new("Invalid node(#{node.name}), expecting #{@@xml_name}")
+      end
       new()
     end
 
@@ -28,10 +29,10 @@ module XMPP::Stanza
       when "enabled" then SMEnabled.new node
       when "resumed" then SMResumed.new node
       when "r"       then SMRequest.new node
-      when "h"       then SMAnswer.new node
+      when "a"       then SMAnswer.new node
       when "failed"  then SMFailed.new node
       else
-        raise "unexpected XMPP packet #{node.namespace.try &.href}<#{node.name}>"
+        raise ParseError.new("unexpected XMPP packet #{node.namespace.try &.href}<#{node.name}>")
       end
     end
   end
