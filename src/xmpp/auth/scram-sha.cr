@@ -129,6 +129,7 @@ module XMPP
       value.split(",").each do |v|
         pair = v.split("=")
         key, val = pair[0], v[2..]
+        raise AuthenticationError.new "Server sent duplicate SCRAM attribute '#{key}'" if res.has_key?(key)
         res[key] = val
       end
       # RFC 5802:
@@ -152,6 +153,10 @@ module XMPP
       else
         raise "Server didn't sent nonce"
       end
+      TLSChannelBindingDowngradeProtection.verify!(
+        res["t"]?,
+        @tls_socket.try &.tls_version
+      )
       res
     end
 

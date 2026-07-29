@@ -62,11 +62,8 @@ module XMPP
     end
 
     # Get TLS version string from socket
-    private def self.get_tls_version(socket : OpenSSL::SSL::Socket::Client) : String?
-      # Crystal's OpenSSL binding may not expose version directly
-      # This is a placeholder - actual implementation depends on Crystal's OpenSSL API
-      # For now, we'll try to detect based on available methods
-      "TLSv1.3" # Default assumption for modern connections
+    private def self.get_tls_version(socket : OpenSSL::SSL::Socket::Client) : String
+      socket.tls_version
     end
 
     # RFC 9266: tls-exporter channel binding for TLS 1.3

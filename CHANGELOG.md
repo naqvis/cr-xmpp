@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added - TLS Channel-Binding Downgrade Protection (XEP-0515)
+
+- Added verification of the signed SCRAM `t` attribute against the locally
+  negotiated TLS protocol version.
+- Applied the check to both SASL1 and SASL2 through their shared SCRAM
+  challenge parser.
+- Added TLS 1.0 through TLS 1.3 wire-version encoding and fail-closed handling
+  for mismatches, missing TLS state, and unknown negotiated versions.
+- Replaced the channel-binding code's hard-coded TLS 1.3 assumption with the
+  version reported by the active OpenSSL socket.
+- Added duplicate SCRAM attribute rejection and seven focused XEP-0515 tests.
+- Total tests: 229, all passing.
+
 ### Added - Enhanced PubSub Support (XEP-0060)
 
 #### Complete Subscription Management Implementation

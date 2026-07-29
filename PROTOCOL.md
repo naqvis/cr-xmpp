@@ -26,6 +26,7 @@ Here are listed the XMPP Protocol Extensions that cr-xmpp supports, as well as t
 - XEP-0440: SASL Channel-Binding Type Capability _v0.2.0_
 - XEP-0474: SASL SCRAM Downgrade Protection _v0.3.0_
 - XEP-0480: SASL Upgrade Tasks _v0.2.0_
+- XEP-0515: TLS Channel-Binding Downgrade Protection _v0.1.0_
 
 # XMPP Extensions (Partial)
 
@@ -63,12 +64,12 @@ Here are listed the XMPP Protocol Extensions that cr-xmpp supports, as well as t
 
 **Total Support:**
 
-- Complete: 17 XEPs
+- Complete: 18 XEPs
 - Partial: 4 XEPs
 - Planned: 14 XEPs
-- Total: 35 protocols (2 RFCs + 33 XEPs)
+- Total: 36 protocols (2 RFCs + 34 XEPs)
 
-**Test Coverage:** 219 tests, all passing
+**Test Coverage:** 229 tests, all passing
 
 **Modern Features:**
 

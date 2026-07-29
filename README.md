@@ -60,6 +60,7 @@ For detailed version information, implementation status, and planned features, s
 - [XEP-0440 - SASL Channel-Binding Type Capability](https://xmpp.org/extensions/xep-0440.html)
 - [XEP-0474 - SASL SCRAM Downgrade Protection](https://xmpp.org/extensions/xep-0474.html)
 - [XEP-0480 - SASL Upgrade Tasks](https://xmpp.org/extensions/xep-0480.html)
+- [XEP-0515 - TLS Channel-Binding Downgrade Protection](https://xmpp.org/extensions/xep-0515.html)
 
 ### Security & Channel Binding
 
@@ -212,6 +213,7 @@ Channel binding is used with SCRAM mechanisms that have the `-PLUS` suffix:
 - ✅ XEP-0388: Extensible SASL Profile (SASL2)
 - ✅ XEP-0440: Channel binding type capability
 - ✅ XEP-0474: Downgrade protection
+- ✅ XEP-0515: TLS version downgrade protection
 - ✅ tls-server-end-point (fully functional for TLS 1.2/1.3)
 - ⚠️ tls-unique and tls-exporter (require OpenSSL FFI extensions)
 
