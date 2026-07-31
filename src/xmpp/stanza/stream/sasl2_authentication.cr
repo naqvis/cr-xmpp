@@ -1,4 +1,5 @@
 require "../../stanza"
+require "../bind2"
 
 module XMPP::Stanza
   # XEP-0388: Extensible SASL Profile (SASL2)
@@ -6,6 +7,7 @@ module XMPP::Stanza
   class SASL2Authentication
     class_getter xml_name : XMLName = XMLName.new("urn:xmpp:sasl:2", "authentication")
     property mechanisms : Array(String) = Array(String).new
+    property bind2 : Bind2Feature? = nil
     property inline_features : Array(Node) = Array(Node).new
 
     def self.new(node : XML::Node)
@@ -18,7 +20,12 @@ module XMPP::Stanza
         when "inline"
           # Parse inline features that can be negotiated during auth
           child.children.select(&.element?).each do |inline_child|
-            cls.inline_features << Node.new(inline_child)
+            namespace = inline_child.namespace.try(&.href) || ""
+            if inline_child.name == Bind2Feature.xml_name.local && namespace == Bind2Feature.xml_name.space
+              cls.bind2 = Bind2Feature.new(inline_child)
+            else
+              cls.inline_features << Node.new(inline_child)
+            end
           end
         end
       end
@@ -30,8 +37,9 @@ module XMPP::Stanza
         mechanisms.each do |mech|
           xml.element("mechanism") { xml.text mech }
         end
-        unless inline_features.empty?
+        if bind2 || !inline_features.empty?
           xml.element("inline") do
+            bind2.try &.to_xml(xml)
             inline_features.each(&.to_xml(xml))
           end
         end
@@ -45,7 +53,12 @@ module XMPP::Stanza
 
     # Check if inline feature is supported
     def supports_inline?(namespace : String) : Bool
-      inline_features.any? { |ftr| ftr.namespace == namespace }
+      (namespace == NS_BIND2 && !bind2.nil?) ||
+        inline_features.any? { |ftr| ftr.namespace == namespace }
+    end
+
+    def supports_bind2? : Bool
+      !bind2.nil?
     end
   end
 end

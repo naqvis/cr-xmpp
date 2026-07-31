@@ -1,4 +1,4 @@
-require "openssl_ext"
+require "openssl"
 require "base64"
 
 lib LibSSL

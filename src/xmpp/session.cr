@@ -71,18 +71,28 @@ module XMPP
       reset(io, tls_conn, config) if tls_enabled?
 
       # auth
-      auth config
-      reset(tls_conn, tls_conn, config) unless @features.sasl2_authentication
-
-      # attemp resumption
-      if resume config
-        @resumed = true
-        return
+      bind2_jid, used_sasl2 = auth config
+      if used_sasl2
+        # XEP-0388 sends the authenticated stream's features immediately after
+        # <success/> without restarting the stream.
+        @features = Stanza::StreamFeatures.new(read_resp)
+      else
+        reset(tls_conn, tls_conn, config)
       end
 
-      # otherwise, bind resource and 'start' XMPP session
-      bind config
-      rfc_3921_session config
+      if bind2_jid
+        @bind_jid = bind2_jid
+      else
+        # attemp resumption
+        if resume config
+          @resumed = true
+          return
+        end
+
+        # otherwise, bind resource and 'start' XMPP session
+        bind config
+        rfc_3921_session config
+      end
 
       # Enable stream management if supported
       enable_stream_management config
@@ -196,8 +206,18 @@ module XMPP
       # Pass TLS socket if available for channel binding support
       tls_socket = @stream_logger.is_a?(StreamLogger) ? @stream_logger.as(StreamLogger).tls_socket : nil
       tls_verified = !tls_socket.nil? && !o.skip_cert_verify?
-      auth = AuthHandler.new(@stream_logger, @stream_reader, @features, o.password, o.parsed_jid, tls_socket, tls_verified)
+      auth = AuthHandler.new(
+        @stream_logger,
+        @stream_reader,
+        @features,
+        o.password,
+        o.parsed_jid,
+        tls_socket,
+        tls_verified,
+        request_bind2: !@sm_state.can_resume?
+      )
       auth.authenticate o.sasl_auth_order
+      {auth.bound_jid, auth.used_sasl2?}
     end
 
     private def resume(o)
@@ -302,7 +322,7 @@ module XMPP
       iq.type = "get"
       iq.id = "disco1"
       iq.to = o.parsed_jid.domain
-      iq.from = o.parsed_jid.to_s
+      iq.from = @bind_jid.blank? ? o.parsed_jid.to_s : @bind_jid
       iq.disco_info
       xml = iq.to_xml
       stream_managed = !@sm_state.id.blank?

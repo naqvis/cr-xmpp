@@ -1,8 +1,12 @@
 admins = {}
 
+plugin_paths = { "/usr/local/lib/prosody/site-modules" }
+
 modules_enabled = {
     "disco";
     "ping";
+    "sasl2";
+    "sasl2_bind2";
     "saslauth";
     "smacks";
     "tls";

@@ -53,8 +53,6 @@ Then install dependencies:
 shards install
 ```
 
-Channel binding uses the `openssl_ext` dependency installed with the shard.
-
 ## Client quick start
 
 ```crystal

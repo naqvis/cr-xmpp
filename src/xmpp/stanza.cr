@@ -24,6 +24,7 @@ module XMPP::Stanza
   NS_SASL_UPGRADE         = "urn:xmpp:sasl:upgrade:0"
   NS_SCRAM_UPGRADE        = "urn:xmpp:scram-upgrade:0"
   NS_SASL2                = "urn:xmpp:sasl:2"
+  NS_BIND2                = "urn:xmpp:bind:0"
   NS_SASL_CHANNEL_BINDING = "urn:xmpp:sasl-cb:0"
 end
 

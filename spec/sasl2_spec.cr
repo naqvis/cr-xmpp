@@ -29,7 +29,8 @@ describe "XEP-0388: SASL2 (Extensible SASL Profile)" do
         sasl2.mechanisms.should contain("SCRAM-SHA-256-PLUS")
         sasl2.supports_mechanism?("SCRAM-SHA-1").should be_true
         sasl2.supports_mechanism?("PLAIN").should be_false
-        sasl2.inline_features.size.should eq 2
+        sasl2.inline_features.size.should eq 1
+        sasl2.bind2.should_not be_nil
         sasl2.supports_inline?("urn:xmpp:sm:3").should be_true
         sasl2.supports_inline?("urn:xmpp:bind:0").should be_true
       end

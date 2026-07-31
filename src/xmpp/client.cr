@@ -113,6 +113,11 @@ module XMPP
       @session.resumed?
     end
 
+    # Full JID assigned to the active session by RFC 6120 binding or Bind 2.
+    def bound_jid : String
+      @session.bind_jid
+    end
+
     # Resume attempts resuming  a Stream Managed session, based on the provided stream management state
     def resume(state : SMState)
       begin_connect
@@ -294,7 +299,8 @@ module XMPP
               iq.type = "get"
               iq.id = connection.session.packet_id
               iq.to = @config.parsed_jid.domain
-              iq.from = @config.parsed_jid.to_s
+              bound_jid = connection.session.bind_jid
+              iq.from = bound_jid.blank? ? @config.parsed_jid.to_s : bound_jid
               iq.payload = Stanza::Ping.new
               send iq
             else

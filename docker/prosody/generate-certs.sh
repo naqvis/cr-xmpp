@@ -31,7 +31,6 @@ openssl x509 -req -sha256 \
     -extfile "./docker/prosody/localhost.ext"
 
 rm -f "$CERT_DIR/localhost.csr" "$CERT_DIR/ca.srl"
-chmod 644 "$CERT_DIR/ca.crt" "$CERT_DIR/localhost.crt"
-chmod 600 "$CERT_DIR/ca.key" "$CERT_DIR/localhost.key"
+chmod 644 "$CERT_DIR/ca.crt" "$CERT_DIR/localhost.crt" "$CERT_DIR/ca.key" "$CERT_DIR/localhost.key"
 
 echo "Generated trusted integration certificates in $CERT_DIR"

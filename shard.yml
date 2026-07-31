@@ -1,20 +1,11 @@
 name: cr-xmpp
-version: 0.5.0
+version: 0.6.0
 description: |
   XMPP/Jabber Library for Crystal focusing on simplicity, simple automation, and IoT.
 
 authors:
   - Ali Naqvi <syed.alinaqvi@gmail.com>
 
-crystal: ">= 1.12.0, < 2.0.0"
-
-dependencies:
-  openssl_ext:
-    github: spider-gazelle/openssl_ext
-    # Required for channel binding support (RFC 5929, RFC 9266)
-    # Provides extended OpenSSL functionality including certificate DER encoding
-development_dependencies:
-  ameba:
-    github: veelenga/ameba
+crystal: ~> 1.0
 
 license: MIT

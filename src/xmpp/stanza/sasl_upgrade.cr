@@ -1,5 +1,6 @@
 require "../stanza"
 require "./registry"
+require "./bind2"
 
 module XMPP::Stanza
   # XEP-0480: SASL Upgrade Tasks
@@ -44,6 +45,7 @@ module XMPP::Stanza
     property initial_response : String = ""
     property user_agent : SASL2UserAgent? = nil
     property upgrades : Array(String) = Array(String).new
+    property bind2 : Bind2Request? = nil
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
@@ -62,12 +64,20 @@ module XMPP::Stanza
           cls.user_agent = SASL2UserAgent.new(child)
         when {"upgrade", NS_SASL_UPGRADE}
           cls.upgrades << child.content
+        when {Bind2Request.xml_name.local, Bind2Request.xml_name.space}
+          cls.bind2 = Bind2Request.new(child)
         end
       end
       cls
     end
 
-    def initialize(@mechanism = "", @initial_response = "", @user_agent = nil, @upgrades = Array(String).new)
+    def initialize(
+      @mechanism = "",
+      @initial_response = "",
+      @user_agent = nil,
+      @upgrades = Array(String).new,
+      @bind2 = nil,
+    )
     end
 
     def to_xml(xml : XML::Builder)
@@ -81,6 +91,7 @@ module XMPP::Stanza
         upgrades.each do |upgrade|
           xml.element("upgrade", {"xmlns" => NS_SASL_UPGRADE}) { xml.text upgrade }
         end
+        bind2.try &.to_xml(xml)
       end
     end
 
@@ -270,16 +281,20 @@ module XMPP::Stanza
     property authorization_identifier : String = ""
     property additional_data : String = ""
     property body : String = ""
+    property bound : Bind2Bound? = nil
 
     def self.new(node : XML::Node)
       raise "Invalid node(#{node.name}), expecting #{@@xml_name}" unless (node.namespace.try &.href == @@xml_name.space) && (node.name == @@xml_name.local)
       cls = new()
       node.children.select(&.element?).each do |child|
-        case child.name
-        when "additional-data"
+        namespace = child.namespace.try(&.href) || ""
+        case {child.name, namespace}
+        when {"additional-data", NS_SASL2}
           cls.additional_data = child.content
-        when "authorization-identifier"
+        when {"authorization-identifier", NS_SASL2}
           cls.authorization_identifier = child.content
+        when {Bind2Bound.xml_name.local, Bind2Bound.xml_name.space}
+          cls.bound = Bind2Bound.new(child)
         end
       end
       cls.body = node.text if cls.authorization_identifier.blank?
@@ -294,6 +309,7 @@ module XMPP::Stanza
         elsif !body.blank?
           xml.text body
         end
+        bound.try &.to_xml(xml)
       end
     end
 

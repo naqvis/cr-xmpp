@@ -54,8 +54,10 @@ overstate what the shard does automatically.
 | XEP-0355 — Namespace Delegation | Partial | Component-side advertisements, delegated IQ unwrapping, and response wrapping |
 | XEP-0356 — Privileged Entity | Partial | Component-side permissions, roster helpers, and outgoing privileged messages |
 | XEP-0380 — Explicit Message Encryption | API | Encryption marker and encryption-namespace identifiers; no encryption engine |
+| XEP-0386 — Bind 2 | Integrated | SASL2 inline discovery, bind requests, bound-result handling, assigned-JID propagation, and extensible session feature payloads |
 | XEP-0388 — Extensible SASL Profile (SASL2) | Integrated | Feature parsing and authentication flow with classic SASL fallback |
 | XEP-0440 — SASL Channel-Binding Type Capability | Integrated | Capability parsing, selection, and SCRAM-PLUS negotiation |
+| XEP-0453 — DOAP usage in XMPP | API | RDF/XML project parsing/serialization, common DOAP properties, repositories, releases, and typed `SupportedXep` records |
 | XEP-0474 — SASL SCRAM Downgrade Protection | Integrated | Signed mechanism/channel-binding downgrade verification |
 | XEP-0480 — SASL Upgrade Tasks | Integrated | SCRAM upgrade advertisement, task exchange, and hash generation |
 | XEP-0515 — TLS Channel-Binding Downgrade Protection | Integrated | Negotiated TLS-version verification in SCRAM |

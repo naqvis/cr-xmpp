@@ -8,6 +8,7 @@ module XMPP
       if sasl2 = @features.sasl2_authentication
         if selected = select_mechanism(methods, sasl2.mechanisms, sasl2: true)
           Logger.info("Server supports SASL2 (XEP-0388), using modern authentication flow")
+          @used_sasl2 = true
           return authenticate_sasl2(selected, sasl2)
         end
 
@@ -46,26 +47,37 @@ module XMPP
         end
       end
 
+      bind2 = bind2_request(sasl2)
+
       # Perform SASL2 authentication based on mechanism
       case selected_mechanism
-      when AuthMechanism::SCRAM_SHA_1        then auth_scram_sasl2("sha1", false, upgrades, sasl2.mechanisms)
-      when AuthMechanism::SCRAM_SHA_256      then auth_scram_sasl2("sha256", false, upgrades, sasl2.mechanisms)
-      when AuthMechanism::SCRAM_SHA_512      then auth_scram_sasl2("sha512", false, upgrades, sasl2.mechanisms)
-      when AuthMechanism::SCRAM_SHA_1_PLUS   then auth_scram_sasl2("sha1", true, upgrades, sasl2.mechanisms)
-      when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram_sasl2("sha256", true, upgrades, sasl2.mechanisms)
-      when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram_sasl2("sha512", true, upgrades, sasl2.mechanisms)
-      when AuthMechanism::PLAIN              then auth_simple_sasl2(selected_mechanism, plain_initial_response)
-      when AuthMechanism::ANONYMOUS          then auth_simple_sasl2(selected_mechanism)
+      when AuthMechanism::SCRAM_SHA_1        then auth_scram_sasl2("sha1", false, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::SCRAM_SHA_256      then auth_scram_sasl2("sha256", false, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::SCRAM_SHA_512      then auth_scram_sasl2("sha512", false, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::SCRAM_SHA_1_PLUS   then auth_scram_sasl2("sha1", true, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::SCRAM_SHA_256_PLUS then auth_scram_sasl2("sha256", true, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::SCRAM_SHA_512_PLUS then auth_scram_sasl2("sha512", true, upgrades, sasl2.mechanisms, bind2)
+      when AuthMechanism::PLAIN              then auth_simple_sasl2(selected_mechanism, plain_initial_response, bind2)
+      when AuthMechanism::ANONYMOUS          then auth_simple_sasl2(selected_mechanism, bind2: bind2)
       else
         raise AuthenticationError.new "SASL2 mechanism '#{selected_mechanism}' not implemented yet"
       end
+    end
+
+    private def bind2_request(sasl2 : Stanza::SASL2Authentication) : Stanza::Bind2Request?
+      return unless @request_bind2 && sasl2.supports_bind2?
+      Stanza::Bind2Request.new(tag: @jid.resource || "")
     end
 
     private def plain_initial_response : String
       Base64.strict_encode("\x00#{@jid.node}\x00#{@password}")
     end
 
-    private def auth_simple_sasl2(mechanism : AuthMechanism, initial_response = "")
+    private def auth_simple_sasl2(
+      mechanism : AuthMechanism,
+      initial_response = "",
+      bind2 : Stanza::Bind2Request? = nil,
+    )
       user_agent = Stanza::SASL2UserAgent.new(
         id: UUID.random.to_s,
         software: "Crystal-XMPP",
@@ -74,7 +86,8 @@ module XMPP
       send Stanza::SASL2Authenticate.new(
         mechanism: mechanism.to_s,
         initial_response: initial_response,
-        user_agent: user_agent
+        user_agent: user_agent,
+        bind2: bind2
       )
 
       case response = Stanza::Parser.next_packet(read_resp)
@@ -94,6 +107,7 @@ module XMPP
       use_channel_binding : Bool,
       upgrades : Array(String),
       advertised_mechanisms : Array(String),
+      bind2 : Stanza::Bind2Request?,
     )
       algorithm = case method
                   when "sha256" then OpenSSL::Algorithm::SHA256
@@ -146,7 +160,8 @@ module XMPP
         mechanism: name,
         initial_response: enc,
         user_agent: user_agent,
-        upgrades: upgrades
+        upgrades: upgrades,
+        bind2: bind2
       )
       send auth_request
 
@@ -199,6 +214,22 @@ module XMPP
 
       Logger.info("#{mechanism_name} - SASL2 Auth successful")
       Logger.info("Authorization identifier: #{success.authorization_identifier}")
+
+      if success.bound
+        unless @request_bind2
+          raise AuthenticationError.new("Server returned an unexpected Bind 2 bound response")
+        end
+        if success.authorization_identifier.blank?
+          raise AuthenticationError.new("Bind 2 success is missing authorization-identifier")
+        end
+        JID.new(success.authorization_identifier)
+        unless success.authorization_identifier.includes?('/')
+          raise AuthenticationError.new("Bind 2 success did not assign a resource")
+        end
+        @bound_jid = success.authorization_identifier
+      elsif @request_bind2 && @features.sasl2_authentication.try(&.supports_bind2?)
+        raise AuthenticationError.new("Server omitted the Bind 2 bound response")
+      end
     end
 
     # Handle SASL2 continue (for upgrade tasks)

@@ -74,8 +74,20 @@ module XMPP
     @features : Stanza::StreamFeatures
     @tls_socket : OpenSSL::SSL::Socket::Client?
     @tls_verified : Bool
+    @request_bind2 : Bool
+    getter bound_jid : String? = nil
+    getter? used_sasl2 : Bool = false
 
-    def initialize(@io, @reader, @features, @password, @jid, @tls_socket = nil, @tls_verified = false)
+    def initialize(
+      @io,
+      @reader,
+      @features,
+      @password,
+      @jid,
+      @tls_socket = nil,
+      @tls_verified = false,
+      @request_bind2 = true,
+    )
       sasl1_count = @features.mechanisms.try(&.mechanism.size) || 0
       sasl2_count = @features.sasl2_authentication.try(&.mechanisms.size) || 0
       raise AuthenticationError.new "Server returned empty list of Authentication mechanisms" unless sasl1_count > 0 || sasl2_count > 0

@@ -9,6 +9,7 @@ services:
     volumes:
       - ./docker/prosody/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua:ro
       - ./docker/prosody/certs:/etc/prosody/certs:ro
+      - ./docker/prosody/modules:/usr/local/lib/prosody/site-modules:ro
       - prosody-data:/var/lib/prosody
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/5222"]

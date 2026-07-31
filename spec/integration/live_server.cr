@@ -112,6 +112,27 @@ private def connect_and_disconnect(config : XMPP::Config) : Array(XMPP::Connecti
 end
 
 describe "live Prosody interoperability" do
+  it "authenticates and binds a server-assigned resource with XEP-0386" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(integration_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+
+      client.bound_jid.should match(/\Atest@localhost\/integration~.+\z/)
+      transcript = wire.to_s
+      transcript.should match(
+        /SEND:\n<authenticate[^>]*xmlns="urn:xmpp:sasl:2"[\s\S]*<bind xmlns="urn:xmpp:bind:0">\s*<tag>integration<\/tag>\s*<\/bind>/
+      )
+      transcript.should match(/RECV:\n[\s\S]*<bound xmlns=['"]urn:xmpp:bind:0['"]/)
+      transcript.should_not match(
+        /SEND:\n<iq[^>]*>[\s\S]*?<bind xmlns=['"]urn:ietf:params:xml:ns:xmpp-bind['"]/
+      )
+    ensure
+      client.disconnect
+    end
+  end
+
   it "establishes a certificate-verified TLS and SCRAM session" do
     wire = IO::Memory.new
     states = connect_and_disconnect(integration_config(wire))
