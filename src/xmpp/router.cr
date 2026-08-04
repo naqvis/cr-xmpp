@@ -17,6 +17,7 @@ module XMPP
   class Router
     # Routes to be matched, in order
     @routes : Array(Route)
+    @mutex = Sync::Mutex.new
 
     def initialize
       @routes = Array(Route).new
@@ -39,7 +40,7 @@ module XMPP
     # route register an empty routes
     def route(&handler : Callback)
       r = Route.new(handler)
-      @routes << r
+      @mutex.synchronize { @routes << r }
       r
     end
 
@@ -48,11 +49,18 @@ module XMPP
     end
 
     def match(p : Stanza::Packet)
-      @routes.each do |route|
-        m = route.match(p)
-        return m unless m.nil?
+      @mutex.synchronize do
+        @routes.each do |route|
+          m = route.match(p)
+          return m unless m.nil?
+        end
       end
       nil
+    end
+
+    # remove unregisters a previously registered route.
+    def remove(route : Route)
+      @mutex.synchronize { @routes.delete(route) }
     end
 
     # on registers a new route with a matcher for a given packet name (iq, message, presence)
@@ -130,6 +138,10 @@ module XMPP
       namespaces.map!(&.downcase)
       add_matcher NSIQMatcher.new(namespaces)
     end
+
+    def iq_ids(ids : Array(String))
+      add_matcher NSIQIdMatcher.new(ids)
+    end
   end
 
   # Matchers are used to "specialize" routes and focus on specific packet features
@@ -193,6 +205,20 @@ module XMPP
       else
         false
       end
+    end
+  end
+
+  # NSIQIdMatcher matches an IQ stanza on its id attribute. It is used to
+  # correlate a synchronous request with its matching result.
+  private class NSIQIdMatcher < Matcher
+    @ids : Array(String)
+
+    def initialize(@ids)
+    end
+
+    def match(p : Stanza::Packet) : Bool
+      return false unless p.is_a?(Stanza::IQ)
+      @ids.includes?(p.as(Stanza::IQ).id)
     end
   end
 end

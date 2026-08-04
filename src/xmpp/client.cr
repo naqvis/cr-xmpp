@@ -2,10 +2,12 @@ require "socket"
 require "openssl"
 require "./event_manager"
 require "./stream_management"
+require "./connection"
+require "./tls"
 
 module XMPP
   private class ClientConnection
-    getter socket : TCPSocket
+    getter socket : IO
     getter session : Session
     getter state : SMState
     getter stop : Channel(Nil)
@@ -118,6 +120,14 @@ module XMPP
       @session.bind_jid
     end
 
+    # Bare JID (node@domain) of the account, derived from the bound JID when
+    # available and falling back to the configured JID.
+    def bare_jid : String
+      bound = @session.bind_jid
+      return XMPP::JID.new(bound).bare unless bound.blank?
+      @config.parsed_jid.bare
+    end
+
     # Resume attempts resuming  a Stream Managed session, based on the provided stream management state
     def resume(state : SMState)
       begin_connect
@@ -127,11 +137,7 @@ module XMPP
         socket = nil.as(TCPSocket?)
         connection = nil.as(ClientConnection?)
 
-        socket = TCPSocket.new(@config.host, @config.port, connect_timeout: @config.connect_timeout)
-        socket.tcp_keepalive_interval = 30
-        socket.read_timeout = @config.io_timeout.seconds
-        socket.write_timeout = @config.io_timeout.seconds
-        socket.sync = true
+        io, socket, tls_socket = open_socket
         @connection_mutex.synchronize do
           raise ConnectionError.new("connection attempt was cancelled") if @connect_cancelled
           @socket = socket
@@ -140,11 +146,11 @@ module XMPP
         ensure_connect_not_cancelled
 
         # Client is ok, we now open XMPP session
-        session = Session.new(socket, @config, state)
+        session = Session.new(io, @config, state)
         ensure_connect_not_cancelled
         @session = session
         @supports_ping = session.supports_ping
-        connection = ClientConnection.new(socket, session, session.sm_state)
+        connection = ClientConnection.new(io, session, session.sm_state)
         @connection_mutex.synchronize { @connection = connection }
 
         # Enable stream management tracking if SM is active
@@ -171,7 +177,7 @@ module XMPP
         spawn { recv(connection) }
         update_state ConnectionState::SessionEstablished
       rescue ex
-        cleanup_failed_connect(connection, socket)
+        cleanup_failed_connect(connection, socket, tls_socket)
         raise ex
       ensure
         @connection_mutex.synchronize { @connecting = false }
@@ -205,9 +211,17 @@ module XMPP
       rescue ex
         Logger.warn "Error during disconnect: #{ex.message}"
       ensure
-        connection.socket.close unless connection.socket.closed?
+        close_connection_socket(connection)
         finish_connection(connection, notify: true)
       end
+    end
+
+    # Tearing down the socket is best-effort: SSL_shutdown can legitimately
+    # fail when the peer sent application data after its close_notify (common
+    # with XEP-0368 direct TLS), which must not surface to the caller.
+    private def close_connection_socket(connection : ClientConnection)
+      connection.socket.close unless connection.socket.closed?
+    rescue OpenSSL::SSL::Error | IO::Error
     end
 
     private def wait_for_receiver(connection : ClientConnection, timeout : Float64)
@@ -238,6 +252,32 @@ module XMPP
     def send(packet : String)
       connection = active_connection
       write_to(connection, packet, track: true)
+    end
+
+    # request performs a synchronous IQ request/response round-trip and
+    # returns the matching result stanza (or the IQ error stanza) within the
+    # given timeout. Returns nil if no response arrives before the timeout.
+    def request(iq : Stanza::IQ, timeout : Time::Span = 5.seconds) : Stanza::IQ?
+      iq.id = @session.packet_id if iq.id.blank?
+      id = iq.id
+
+      response = Channel(Stanza::IQ?).new
+      route = @router.route do |_sender, packet|
+        next unless packet.is_a?(Stanza::IQ)
+        next unless packet.as(Stanza::IQ).id == id
+        response.send(packet.as(Stanza::IQ)) unless response.closed?
+      end
+      route.iq_ids([id])
+
+      send iq
+      result = select
+      when iq_result = response.receive
+        iq_result
+      when timeout(timeout)
+        nil
+      end
+      @router.remove(route)
+      result
     end
 
     # Loop: Receive data from server
@@ -361,8 +401,49 @@ module XMPP
       end
     end
 
-    private def cleanup_failed_connect(connection : ClientConnection?, socket : TCPSocket?)
+    # Try each resolved endpoint in order (XEP-0368 prefers direct TLS, then
+    # STARTTLS SRV records, falling back to the configured host). Returns the
+    # connected IO (possibly TLS-wrapped) plus the raw TCP socket for tracking.
+    private def open_socket : {IO, TCPSocket, OpenSSL::SSL::Socket::Client?}
+      endpoints = ConnectionResolver.resolve(@config)
+      last_error = nil.as(Exception?)
+      endpoints.each do |endpoint|
+        begin
+          tcp = TCPSocket.new(endpoint.host, endpoint.port, connect_timeout: @config.connect_timeout)
+          tcp.tcp_keepalive_interval = 30
+          tcp.read_timeout = @config.io_timeout.seconds
+          tcp.write_timeout = @config.io_timeout.seconds
+          tcp.sync = true
+          if endpoint.mode.direct_tls?
+            # XEP-0368: wrap immediately; no plaintext stream bytes are sent.
+            tls = TLSConnection.wrap(tcp, @config, endpoint.host)
+            return {tls, tcp, tls}
+          end
+          return {tcp, tcp, nil}
+        rescue ex
+          Logger.warn "Connection to #{endpoint.host}:#{endpoint.port} failed: #{ex.message}"
+          last_error = ex
+        end
+      end
+      raise ConnectionError.new("unable to connect to any XMPP endpoint#{last_error ? ": #{last_error.message}" : ""}")
+    end
+
+    # TLS introspection (RFC 7590 §3.6). Delegate to the active session.
+    def tls_version : String?
+      @session.tls_version
+    end
+
+    def cipher : String?
+      @session.cipher
+    end
+
+    def tls_verified? : Bool
+      @session.tls_verified?
+    end
+
+    private def cleanup_failed_connect(connection : ClientConnection?, socket : TCPSocket?, tls_socket : OpenSSL::SSL::Socket::Client? = nil)
       connection.try &.request_stop(intentional: true)
+      tls_socket.try { |open_tls| open_tls.close unless open_tls.closed? }
       socket.try { |open_socket| open_socket.close unless open_socket.closed? }
       @connection_mutex.synchronize do
         @connection = nil if connection && @connection.try(&.same?(connection))
@@ -379,7 +460,7 @@ module XMPP
       exception : Exception? = nil,
     )
       connection.request_stop(intentional: false)
-      connection.socket.close unless connection.socket.closed?
+      close_connection_socket(connection)
       was_active = @connection_mutex.synchronize do
         next false unless @connection.try(&.same?(connection))
         @connection = nil

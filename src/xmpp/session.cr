@@ -3,6 +3,7 @@ require "openssl"
 require "./config"
 require "./auth"
 require "./stanza"
+require "./tls"
 
 module XMPP
   class Session
@@ -16,6 +17,29 @@ module XMPP
     getter? tls_enabled : Bool = false
     getter? resumed : Bool = false
     getter last_packet_id : Int32 = 0
+    @skip_cert_verify : Bool = false
+
+    # TLS introspection (RFC 7590 §3.6): the negotiated TLS version, cipher
+    # suite, and whether the peer certificate was verified. Nil when the
+    # connection is not encrypted.
+    def tls_version : String?
+      tls_socket.try &.tls_version
+    end
+
+    def cipher : String?
+      tls_socket.try &.cipher
+    end
+
+    def tls_verified? : Bool
+      !tls_socket.nil? && !@skip_cert_verify
+    end
+
+    private def tls_socket : OpenSSL::SSL::Socket::Client?
+      case logger = @stream_logger
+      when StreamLogger
+        logger.tls_socket
+      end
+    end
 
     # Read/Write
     @stream_logger : IO
@@ -33,9 +57,9 @@ module XMPP
       @features = Stanza::StreamFeatures.new
       @stream_logger = STDOUT
       @stream_reader = XMLStreamReader.new(@stream_logger)
+      @skip_cert_verify = false
     end
 
-    # ameba:disable Metrics/CyclomaticComplexity
     def initialize(io, config : Config, @sm_state)
       @connected = !io.closed?
       @bind_jid = ""
@@ -46,29 +70,32 @@ module XMPP
       end
       @stream_logger = StreamLogger.new(io, config.log_file)
       @stream_reader = XMLStreamReader.new(@stream_logger, config.max_stanza_size)
+
+      # XEP-0368: a client-side pre-wrapped TLS socket means direct TLS, so
+      # STARTTLS MUST NOT be negotiated. The stream opens directly on it.
+      direct_tls = io.is_a?(OpenSSL::SSL::Socket::Client)
+      @tls_enabled = direct_tls
+      @skip_cert_verify = config.skip_cert_verify?
+      tls_conn = io
+
       @features = open config.parsed_jid.domain
 
-      ok = @features.tls_required
-      if ok && !config.tls?
-        raise TLSUnavailableError.new("Server requires TLS but TLS is disabled in the client configuration")
-      end
-
-      _, ok = @features.does_start_tls
-      if config.tls? && !ok
-        raise TLSUnavailableError.new("TLS was requested but the XMPP server does not advertise STARTTLS")
-      end
-
-      # starttls
-      if ok && config.tls?
-        tls_conn = start_tls_if_supported io, config
-        if tls_conn.is_a?(IO::Buffered)
-          tls_conn.sync = false
+      unless direct_tls
+        if @features.tls_required && !config.tls?
+          raise TLSUnavailableError.new("Server requires TLS but TLS is disabled in the client configuration")
         end
-        raise TLSNegotiationError.new("Failed to negotiate TLS session") unless tls_enabled?
-      else
-        tls_conn = io
+
+        # RFC 7590 §3.1 anti-stripping: attempt STARTTLS even when the server
+        # does not advertise it. Only a real negotiation failure aborts.
+        if config.tls?
+          tls_conn = start_tls_if_supported io, config
+          if tls_conn.is_a?(IO::Buffered)
+            tls_conn.sync = false
+          end
+          raise TLSNegotiationError.new("Failed to negotiate TLS session") unless tls_enabled?
+        end
+        reset(io, tls_conn, config) if tls_enabled?
       end
-      reset(io, tls_conn, config) if tls_enabled?
 
       # auth
       bind2_jid, used_sasl2 = auth config
@@ -154,45 +181,21 @@ module XMPP
     end
 
     private def start_tls_if_supported(socket, o)
-      _, ok = @features.does_start_tls
-      if ok
+      advertised, _ = @features.does_start_tls
+      if !advertised && o.tls?
+        # RFC 7590 §3.1: attempt STARTTLS even when the server does not
+        # advertise it, so a downgrade attack cannot silently strip encryption.
+        Logger.warn "Server did not advertise STARTTLS; attempting anyway to prevent TLS stripping (RFC 7590 §3.1)"
+      end
+      if o.tls?
         send "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
         begin
           Stanza::TLSProceed.new read_resp
         rescue ex
           raise TLSNegotiationError.new("Expected STARTTLS proceed response: #{ex.message}")
         end
-        # Conert existing connection to TLS
-        context = OpenSSL::SSL::Context::Client.new
-        context.add_options(
-          OpenSSL::SSL::Options::NO_TLS_V1 |
-          OpenSSL::SSL::Options::NO_TLS_V1_1
-        )
-        if ca_certificates = o.tls_ca_certificates
-          context.ca_certificates = ca_certificates
-        end
-        if o.skip_cert_verify?
-          Logger.warn "TLS certificate verification is disabled; this connection is vulnerable to impersonation"
-          context.verify_mode = OpenSSL::SSL::VerifyMode::None
-        end
-        begin
-          hostname = o.skip_cert_verify? ? nil : o.parsed_jid.domain
-          tls_conn = OpenSSL::SSL::Socket::Client.new(socket, context, hostname: hostname)
-          tls_conn.sync = true
-        rescue ex : OpenSSL::SSL::Error
-          # don't leak the TCP socket when the SSL connection failed
-          socket.close
-          message = ex.message || "TLS handshake failed"
-          if !o.skip_cert_verify? && tls_verification_failure?(message)
-            raise TLSVerificationError.new("TLS certificate or hostname verification failed: #{message}")
-          end
-          raise TLSNegotiationError.new("TLS handshake failed: #{message}")
-        rescue ex
-          socket.close
-          raise ex
-        end
+        tls_conn = TLSConnection.wrap(socket, o, o.parsed_jid.domain)
         @tls_enabled = true
-        socket = tls_conn
         return tls_conn
       end
       # If we do not allow cleartext connections, make it explicit that server do not support starttls
@@ -340,13 +343,6 @@ module XMPP
         @sm_state.process_ack(@sm_state.outbound)
       end
       @disco_info = iq.payload.as?(Stanza::DiscoInfo)
-    end
-
-    private def tls_verification_failure?(message : String) : Bool
-      normalized = message.downcase
-      normalized.includes?("certificate verify") ||
-        normalized.includes?("hostname") ||
-        normalized.includes?("does not match")
     end
   end
 end

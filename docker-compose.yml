@@ -5,6 +5,7 @@ services:
     image: prosodyim/prosody:13.0@sha256:e44a7dfedb776c8945b5c6401a3437a009b549923f7bbcb5a480c2de5f86e5d7
     ports:
       - "${XMPP_PORT:-5222}:5222"
+      - "${XMPP_DIRECT_TLS_PORT:-5223}:5223"
       - "${XMPP_COMPONENT_PORT:-5347}:5347"
     volumes:
       - ./docker/prosody/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua:ro

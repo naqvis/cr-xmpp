@@ -18,7 +18,9 @@
 
     <programming-language>Crystal</programming-language>
 
-    <os>Unix</os>
+    <os>Linux</os>
+    <os>macOS</os>
+    <os>Windows</os>
 
     <category rdf:resource='https://linkmauve.fr/ns/xmpp-doap#category-library'/>
 
@@ -31,6 +33,7 @@
 
     <implements rdf:resource='https://xmpp.org/rfcs/rfc6120.html'/>
     <implements rdf:resource='https://xmpp.org/rfcs/rfc6121.html'/>
+    <implements rdf:resource='https://xmpp.org/rfcs/rfc7590.html'/>
     <implements rdf:resource='https://xmpp.org/rfcs/rfc5802.html'/>
     <implements rdf:resource='https://xmpp.org/rfcs/rfc7677.html'/>
     <implements rdf:resource='https://xmpp.org/rfcs/rfc4013.html'/>
@@ -116,6 +119,12 @@
     </implements>
     <implements>
       <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0163.html'/>
+        <xmpp:status>complete</xmpp:status>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
         <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0184.html'/>
         <xmpp:status>complete</xmpp:status>
       </xmpp:SupportedXep>
@@ -165,6 +174,12 @@
     </implements>
     <implements>
       <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0352.html'/>
+        <xmpp:status>complete</xmpp:status>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
         <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0355.html'/>
         <xmpp:status>partial</xmpp:status>
         <xmpp:note xml:lang='en'>Component-side advertisements, delegated IQ unwrapping, and response wrapping.</xmpp:note>
@@ -175,6 +190,18 @@
         <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0356.html'/>
         <xmpp:status>partial</xmpp:status>
         <xmpp:note xml:lang='en'>Component-side permissions, roster helpers, and outgoing privileged messages.</xmpp:note>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0357.html'/>
+        <xmpp:status>complete</xmpp:status>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0368.html'/>
+        <xmpp:status>complete</xmpp:status>
       </xmpp:SupportedXep>
     </implements>
     <implements>

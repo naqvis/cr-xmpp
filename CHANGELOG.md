@@ -37,6 +37,18 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
 - Fixed component delegation/privilege code paths that previously failed when
   compiling component applications.
 
+### Features
+
+- Implemented RFC 7590 anti-stripping STARTTLS, certificate/hostname
+  verification, and `tls_version`/`cipher`/`tls_verified?` introspection.
+- Implemented XEP-0368 SRV-based connection discovery with direct TLS
+  preference via the `prefer_direct_tls` option and STARTTLS fallback.
+- Added XEP-0163 personal eventing (PEP) with publish/subscribe/unsubscribe
+  and incoming `Stanza::PubSubEvent` notification parsing.
+- Added XEP-0352 client state indication via `XMPP::ClientStateIndication`.
+- Added XEP-0357 push notification enable/disable and discovery via
+  `XMPP::Push`.
+
 ### Security
 
 - Replaced one-shot XML reads with a strict incremental stream reader that

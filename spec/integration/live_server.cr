@@ -1,9 +1,10 @@
 require "../spec_helper"
 
-private INTEGRATION_HOST           = ENV["XMPP_INTEGRATION_HOST"]? || "localhost"
-private INTEGRATION_PORT           = (ENV["XMPP_INTEGRATION_PORT"]? || "55222").to_i
-private INTEGRATION_COMPONENT_PORT = (ENV["XMPP_INTEGRATION_COMPONENT_PORT"]? || "55535").to_i
-private INTEGRATION_CA             = ENV["XMPP_INTEGRATION_CA"]? || "docker/prosody/certs/ca.crt"
+private INTEGRATION_HOST            = ENV["XMPP_INTEGRATION_HOST"]? || "localhost"
+private INTEGRATION_PORT            = (ENV["XMPP_INTEGRATION_PORT"]? || "55222").to_i
+private INTEGRATION_COMPONENT_PORT  = (ENV["XMPP_INTEGRATION_COMPONENT_PORT"]? || "55535").to_i
+private INTEGRATION_CA              = ENV["XMPP_INTEGRATION_CA"]? || "docker/prosody/certs/ca.crt"
+private INTEGRATION_DIRECT_TLS_PORT = (ENV["XMPP_DIRECT_TLS_PORT"]? || "5223").to_i
 
 private class DisconnectingProxy
   getter port : Int32
@@ -68,6 +69,79 @@ private class DisconnectingProxy
   end
 end
 
+# A TCP proxy that forwards the stream verbatim but strips any
+# <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/> element from the
+# server's initial <stream:features>, simulating a TLS-stripping attacker
+# (RFC 7590 §3.1).
+private class StartTLSStrippingProxy
+  getter port : Int32
+
+  @server : TCPServer
+  @upstream_host : String
+  @upstream_port : Int32
+
+  def initialize(@upstream_host, @upstream_port)
+    @server = TCPServer.new("127.0.0.1", 0)
+    @port = @server.local_address.as(Socket::IPAddress).port
+    spawn { accept_connections }
+  end
+
+  def close
+    @server.close
+  end
+
+  private def accept_connections
+    loop do
+      client = @server.accept
+      upstream = TCPSocket.new(@upstream_host, @upstream_port)
+      spawn { pump(client, upstream) }
+      spawn { strip_and_forward(upstream, client) }
+    end
+  rescue IO::Error
+    # Closing the listener terminates the accept loop.
+  end
+
+  private def pump(source : TCPSocket, destination : TCPSocket)
+    IO.copy(source, destination)
+  rescue IO::Error
+  ensure
+    source.close unless source.closed?
+    destination.close unless destination.closed?
+  end
+
+  # Forwards upstream->client, removing <starttls/> from the features element.
+  private def strip_and_forward(upstream : TCPSocket, client : TCPSocket)
+    buffer = IO::Memory.new
+    features_seen = false
+    chunk = Bytes.new(4096)
+
+    loop do
+      count = upstream.read(chunk)
+      break if count == 0
+
+      if features_seen
+        client.write chunk[0, count]
+        next
+      end
+
+      buffer.write chunk[0, count]
+      data = buffer.to_s
+      if close = data.index("</stream:features>")
+        features_seen = true
+        stripped = data[0, close].gsub(/<starttls\b[^>]*\/>/, "")
+        client.write stripped.to_slice
+        tail = data[close, data.size - close]
+        client.write tail.to_slice
+        buffer.clear
+      end
+    end
+  rescue IO::Error
+  ensure
+    upstream.close unless upstream.closed?
+    client.close unless client.closed?
+  end
+end
+
 private def receive_with_timeout(channel : Channel(T), description : String, timeout_seconds = 15) : T forall T
   select
   when value = channel.receive
@@ -82,11 +156,12 @@ private def integration_config(
   auth_order = XMPP::SASL_AUTH_ORDER,
   ca_certificates : String? = INTEGRATION_CA,
   port : Int32 = INTEGRATION_PORT,
+  jid : String = "test@localhost/integration",
 ) : XMPP::Config
   XMPP::Config.new(
     host: INTEGRATION_HOST,
     port: port,
-    jid: "test@localhost/integration",
+    jid: jid,
     password: "test",
     tls: true,
     tls_ca_certificates: ca_certificates,
@@ -94,6 +169,24 @@ private def integration_config(
     auto_presence: false,
     io_timeout: 5,
     log_file: log
+  )
+end
+
+# Direct TLS config: no explicit host so ConnectionResolver consults SRV, with
+# direct TLS preferred. The DNS stub in the test points _xmpps-client at the
+# exposed direct-TLS port.
+private def direct_tls_config(log : IO) : XMPP::Config
+  XMPP::Config.new(
+    host: "",
+    port: INTEGRATION_PORT,
+    jid: "test@localhost/direct-tls",
+    password: "test",
+    tls: true,
+    tls_ca_certificates: INTEGRATION_CA,
+    auto_presence: false,
+    io_timeout: 5,
+    log_file: log,
+    prefer_direct_tls: true
   )
 end
 
@@ -109,6 +202,37 @@ private def connect_and_disconnect(config : XMPP::Config) : Array(XMPP::Connecti
     client.disconnect
   end
   states
+end
+
+private def build_publish_iq(node : String, title : String, to : String) : XMPP::Stanza::IQ
+  iq = XMPP::Stanza::IQ.new
+  iq.type = "set"
+  iq.to = to
+  pubsub = XMPP::Stanza::PubSub.new
+  publish = XMPP::Stanza::Publish.new
+  publish.node = node
+  item = XMPP::Stanza::Item.new
+  item.id = "current"
+  tune = XMPP::Stanza::Tune.new
+  tune.title = title
+  item.tune = tune
+  publish.item = item
+  pubsub.publish = publish
+  iq.payload = pubsub
+  iq
+end
+
+private def build_subscribe_iq(node : String, jid : String, to : String) : XMPP::Stanza::IQ
+  iq = XMPP::Stanza::IQ.new
+  iq.type = "set"
+  iq.to = to
+  pubsub = XMPP::Stanza::PubSub.new
+  subscribe = XMPP::Stanza::Subscribe.new
+  subscribe.node = node
+  subscribe.jid = jid
+  pubsub.subscribe = subscribe
+  iq.payload = pubsub
+  iq
 end
 
 describe "live Prosody interoperability" do
@@ -311,5 +435,204 @@ describe "live Prosody interoperability" do
     wire.to_s.scan(/<presence id='concurrent-\d+-\d+'\/>/).size.should eq(
       fiber_count * messages_per_fiber
     )
+  end
+
+  it "connects via XEP-0368 direct TLS when SRV prefers it" do
+    wire = IO::Memory.new
+    port = srv_dns_server(
+      [
+        {"_xmpps-client._tcp.localhost", 10_u16, 5_u16, INTEGRATION_DIRECT_TLS_PORT.to_u16, "localhost"},
+        {"_xmpp-client._tcp.localhost", 10_u16, 5_u16, INTEGRATION_PORT.to_u16, "localhost"},
+      ],
+      "_xmpp-client._tcp.localhost"
+    )
+    client = nil.as(XMPP::Client?)
+
+    XMPP::DnsSrv.stub_nameservers ["127.0.0.1:#{port}"] do
+      c = XMPP::Client.new(direct_tls_config(wire), XMPP::Router.new)
+      client = c
+      states = [] of XMPP::ConnectionState
+      c.event_handler = ->(event : XMPP::Event) { states << event.state }
+      begin
+        c.connect
+        states.should contain(XMPP::ConnectionState::SessionEstablished)
+        c.tls_version.should_not be_nil
+        c.cipher.should_not be_nil
+        c.tls_verified?.should be_true
+        # Direct TLS connects on 5223 and must not perform a STARTTLS upgrade.
+        wire.to_s.should_not contain("urn:ietf:params:xml:ns:xmpp-tls")
+      ensure
+        c.disconnect
+      end
+    end
+  ensure
+    client.try(&.disconnect)
+  end
+
+  it "negotiates TLS even when STARTTLS is stripped from stream features" do
+    proxy = StartTLSStrippingProxy.new(INTEGRATION_HOST, INTEGRATION_PORT)
+    wire = IO::Memory.new
+    states = connect_and_disconnect(
+      integration_config(wire, port: proxy.port)
+    )
+
+    states.should contain(XMPP::ConnectionState::SessionEstablished)
+    # The server's real features still advertise STARTTLS; only the proxy
+    # stripped it. The client must attempt STARTTLS anyway (RFC 7590 §3.1)
+    # and the session must be encrypted.
+    wire.to_s.should match(/<starttls xmlns=['"]urn:ietf:params:xml:ns:xmpp-tls['"]\/>/)
+  ensure
+    proxy.try(&.close)
+  end
+
+  it "reports TLS introspection on a live encrypted session" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(integration_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      client.tls_version.should_not be_nil
+      client.cipher.should_not be_nil
+      client.tls_verified?.should be_true
+    ensure
+      client.disconnect
+    end
+  end
+
+  it "round-trips a PEP publish/subscribe/notify exchange" do
+    node = "http://jabber.org/protocol/tune"
+
+    subscriber_wire = IO::Memory.new
+    subscriber, subscriber_router = begin
+      router = XMPP::Router.new
+      {XMPP::Client.new(
+        integration_config(subscriber_wire, jid: "test@localhost/pep-subscriber"),
+        router
+      ), router}
+    end
+
+    publisher_wire = IO::Memory.new
+    publisher, publisher_router = begin
+      router = XMPP::Router.new
+      {XMPP::Client.new(
+        integration_config(publisher_wire, jid: "test@localhost/pep-publisher"),
+        router
+      ), router}
+    end
+
+    event_received = Channel(XMPP::Stanza::PubSubEvent).new
+    subscriber_router.message do |_sender, packet|
+      next unless packet.is_a?(XMPP::Stanza::Message)
+      message = packet.as(XMPP::Stanza::Message)
+      if extension = message.get(XMPP::Stanza::PubSubEvent)
+        event = extension.as(XMPP::Stanza::PubSubEvent)
+        event_received.send(event) unless event_received.closed?
+      end
+    end
+
+    # Auto-approve presence subscription requests so PEP delivery is permitted.
+    subscriber_router.presence do |_sender, packet|
+      presence = packet.as(XMPP::Stanza::Presence)
+      next unless presence.type == "subscribe"
+      approval = XMPP::Stanza::Presence.new
+      approval.type = "subscribed"
+      approval.to = presence.from
+      subscriber.send approval
+    end
+    publisher_router.presence do |_sender, packet|
+      presence = packet.as(XMPP::Stanza::Presence)
+      next unless presence.type == "subscribe"
+      approval = XMPP::Stanza::Presence.new
+      approval.type = "subscribed"
+      approval.to = presence.from
+      publisher.send approval
+    end
+
+    begin
+      subscriber.connect
+      publisher.connect
+
+      # Establish mutual presence so the PEP access model permits delivery.
+      subscriber.send XMPP::Stanza::Presence.new
+      publisher.send XMPP::Stanza::Presence.new
+      sleep 100.milliseconds
+      subscribe_presence = XMPP::Stanza::Presence.new
+      subscribe_presence.type = "subscribe"
+      subscribe_presence.to = "test@localhost"
+      subscriber.send subscribe_presence
+      subscribe_presence2 = XMPP::Stanza::Presence.new
+      subscribe_presence2.type = "subscribe"
+      subscribe_presence2.to = "test@localhost"
+      publisher.send subscribe_presence2
+      sleep 500.milliseconds
+
+      # Publisher creates the node implicitly by publishing.
+      publisher.request(build_publish_iq(node, "Hey Jude", "test@localhost")).try(&.type).should eq "result"
+
+      # Subscriber subscribes to the publisher's node.
+      subscriber.request(build_subscribe_iq(node, "test@localhost", "test@localhost")).try(&.type).should eq "result"
+
+      # Publish again; the subscriber must receive a notification.
+      publisher.request(build_publish_iq(node, "Paperback Writer", "test@localhost")).try(&.type).should eq "result"
+
+      select
+      when event = event_received.receive
+        items = event.items
+        items.should_not be_nil
+        items.not_nil!.node.should eq node
+        event.items.not_nil!.items.first.id.should eq "current"
+      when timeout(5.seconds)
+        fail "timed out waiting for PEP notification"
+      end
+    ensure
+      subscriber.disconnect
+      publisher.disconnect
+    end
+  end
+
+  it "tolerates CSI inactive/active nonzas on a live session" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(integration_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      csi = XMPP::ClientStateIndication.new(client)
+      csi.inactive
+      csi.active
+
+      # A ping after the nonzas must still get a pong: the server tolerated them.
+      ping = XMPP::Stanza::IQ.new
+      ping.type = "get"
+      ping.payload = XMPP::Stanza::Ping.new
+      client.request(ping).try(&.type).should eq "result"
+
+      transcript = wire.to_s
+      transcript.should match(/<inactive xmlns="urn:xmpp:csi:0"\/>/)
+      transcript.should match(/<active xmlns="urn:xmpp:csi:0"\/>/)
+    ensure
+      client.disconnect
+    end
+  end
+
+  it "discovers, enables, and disables push notifications" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(integration_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      push = XMPP::Push.new(client)
+
+      push.supported?.should be_true
+
+      enable_response = push.enable("push-5.client.example", "yxs32uqsflafdk3iuqo")
+      enable_response.should_not be_nil
+      enable_response.not_nil!.type.should eq "result"
+
+      disable_response = push.disable("push-5.client.example")
+      disable_response.should_not be_nil
+      disable_response.not_nil!.type.should eq "result"
+    ensure
+      client.disconnect
+    end
   end
 end

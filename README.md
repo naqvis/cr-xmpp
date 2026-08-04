@@ -112,7 +112,13 @@ and TLS-negotiation failures remain retryable.
 
 TLS is enabled by default. The client verifies the certificate against the JID
 domain, rejects TLS 1.0/1.1, applies socket I/O timeouts, and limits individual
-XML elements to 1 MiB.
+XML elements to 1 MiB. Per RFC 7590 the client attempts STARTTLS even when the
+server fails to advertise it, so a downgrade attack cannot silently strip
+encryption.
+
+The negotiated connection can be inspected with `client.tls_version`,
+`client.cipher`, and `client.tls_verified?` (all `nil`/`false` when the stream
+is not encrypted).
 
 ```crystal
 config = XMPP::Config.new(
@@ -124,6 +130,22 @@ config = XMPP::Config.new(
   max_stanza_size: 512 * 1024,
   tls_ca_certificates: "/etc/company/xmpp-ca.pem",
   auto_presence: false
+)
+```
+
+### Direct TLS (XEP-0368)
+
+Setting `prefer_direct_tls: true` opts into XEP-0368 connection discovery:
+when no explicit `host` is configured, the client resolves `_xmpps-client` and
+`_xmpp-client` SRV records and connects with TLS established immediately
+(direct TLS) wherever the server offers it, falling back to STARTTLS. The
+flag defaults to `false`, so existing configurations behave exactly as before.
+
+```crystal
+config = XMPP::Config.new(
+  jid: "bot@example.com/worker",
+  password: ENV["XMPP_PASSWORD"],
+  prefer_direct_tls: true
 )
 ```
 
@@ -165,6 +187,38 @@ support it. The library implements:
 - XEP-0515 TLS-version downgrade protection
 
 See [the channel-binding example](examples/xmpp_channel_binding.cr).
+
+### Personal Eventing (XEP-0163)
+
+`XMPP::PEP` publishes items to the client's own nodes and subscribes to other
+contacts' nodes:
+
+```crystal
+pep = XMPP::PEP.new(client)
+pep.supported? # => true when the server advertises pubsub#pep
+
+tune = XMPP::Stanza::Tune.new
+tune.artist = "The Beatles"
+tune.title = "Hey Jude"
+
+item = XMPP::Stanza::Item.new
+item.tune = tune
+pep.publish "http://jabber.org/protocol/tune", item
+pep.subscribe "friend@example.org", "http://jabber.org/protocol/tune"
+```
+
+Incoming PEP notifications arrive as `XMPP::Stanza::PubSubEvent` message
+payloads:
+
+```crystal
+client.on("message") do |s, p|
+  message = p.as(XMPP::Stanza::Message)
+  if event = message.get(XMPP::Stanza::PubSubEvent)
+    event.items.not_nil!.node          # => "http://jabber.org/protocol/tune"
+    event.items.not_nil!.items         # => published items
+  end
+end
+```
 
 ## Lifecycle and concurrency
 

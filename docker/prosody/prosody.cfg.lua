@@ -3,8 +3,12 @@ admins = {}
 plugin_paths = { "/usr/local/lib/prosody/site-modules" }
 
 modules_enabled = {
+    "cloud_notify";
+    "csi";
     "disco";
     "ping";
+    "pubsub";
+    "pep";
     "sasl2";
     "sasl2_bind2";
     "saslauth";
@@ -20,6 +24,7 @@ storage = "internal"
 interfaces = { "*" }
 component_interfaces = { "*" }
 c2s_ports = { 5222 }
+c2s_direct_tls_ports = { 5223 }
 component_ports = { 5347 }
 
 log = {
