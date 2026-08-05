@@ -7,6 +7,7 @@ services:
       - "${XMPP_PORT:-5222}:5222"
       - "${XMPP_DIRECT_TLS_PORT:-5223}:5223"
       - "${XMPP_COMPONENT_PORT:-5347}:5347"
+      - "${XMPP_HTTP_PORT:-55280}:5280"
     volumes:
       - ./docker/prosody/prosody.cfg.lua:/etc/prosody/prosody.cfg.lua:ro
       - ./docker/prosody/certs:/etc/prosody/certs:ro

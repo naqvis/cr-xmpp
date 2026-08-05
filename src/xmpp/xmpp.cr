@@ -34,3 +34,8 @@ module XMPP
 end
 
 require "./*"
+require "./transport/transport"
+require "./transport/tcp"
+require "./transport/web_socket"
+require "./transport/bosh"
+require "./alt_connections"

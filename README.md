@@ -23,6 +23,9 @@ Highlights include:
 - External-component support with service discovery, namespace delegation,
   privileged-entity helpers, and the same routing and lifecycle model used by
   clients.
+- Multiple connection transports: classic RFC 6120 TCP (STARTTLS or XEP-0368
+  direct TLS), RFC 7395 WebSocket, XEP-0206 BOSH, and XEP-0156 auto-discovery
+  of alternative endpoints.
 - An extension registry and generic XML-node fallback for adding custom or
   experimental protocols without forking the shard.
 
@@ -151,6 +154,30 @@ config = XMPP::Config.new(
 
 `skip_cert_verify: true` disables certificate authentication and is intended
 only for controlled development environments.
+
+### WebSocket, BOSH, and auto-discovery
+
+The same client can run over RFC 7395 WebSocket or XEP-0206 BOSH instead of a
+classic TCP stream:
+
+```crystal
+config = XMPP::Config.new(
+  jid: "bot@example.com/worker",
+  password: ENV["XMPP_PASSWORD"],
+  transport: XMPP::TransportMode::WebSocket, # or ::Bosh
+  url: "wss://xmpp.example.com/ws"
+)
+```
+
+`url` is optional: when omitted the client derives a default endpoint for the
+selected transport (`wss://<domain>/ws` for WebSocket,
+`https://<domain>:5280/http-bind` for BOSH). With
+`transport: XMPP::TransportMode::Auto` the client tries the classic TCP
+path first, then discovers WebSocket and BOSH endpoints from the server's
+XEP-0156 HTTPS host-meta document and connects through the first one that
+works. TLS verification, SASL, stream management, and routing behave
+identically across all transports; SCRAM-PLUS channel binding is limited to
+TCP (and direct TLS), where the TLS session is directly exposed.
 
 ### SASL policy
 

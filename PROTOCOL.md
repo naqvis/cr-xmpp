@@ -15,6 +15,7 @@ This file is the protocol inventory for `cr-xmpp`. It distinguishes integrated l
 | RFC 6120 — XMPP Core                      | Integrated | Client streams, STARTTLS, SASL, resource binding, stanzas, stream errors                                             |
 | RFC 6121 — Instant Messaging and Presence | Integrated | Message/presence routing and roster payloads                                                                         |
 | RFC 7590 — Use of TLS in XMPP             | Integrated | Anti-stripping STARTTLS, certificate/hostname verification, and `tls_version`/`cipher`/`tls_verified?` introspection |
+| RFC 7395 — XMPP over WebSocket            | Integrated | RFC 7395 framing over `HTTP::WebSocket` (`<open/>`/`<close/>` translation) and WebSocket PING keepalive                                       |
 | RFC 5802 — SCRAM-SHA-1                    | Integrated | SCRAM exchange, server verification, and channel binding                                                             |
 | RFC 7677 — SCRAM-SHA-256                  | Integrated | SCRAM-SHA-256 and SCRAM-SHA-256-PLUS                                                                                 |
 | RFC 4013 — SASLprep                       | Partial    | NFKC normalization and prohibited-character checks used by SCRAM                                                     |
@@ -41,9 +42,11 @@ This file is the protocol inventory for `cr-xmpp`. It distinguishes integrated l
 | XEP-0118 — User Tune                                | API        | Tune data model for PubSub/PEP payloads                                                                                         |
 | XEP-0163 — Personal Eventing Protocol               | Integrated | PEP publish/subscribe/unsubscribe, event notification parsing (`Stanza::PubSubEvent`), and disco-based support detection        |
 | XEP-0153 — vCard-Based Avatars                      | API        | Presence update payload                                                                                                         |
+| XEP-0156 — Discovering Alternative Connection Methods | Integrated | HTTPS host-meta (XRD/JRD) discovery of WebSocket and BOSH endpoints; DNS TXT method intentionally omitted (removed from the spec)              |
 | XEP-0184 — Message Delivery Receipts                | API        | Receipt request and received markers                                                                                            |
 | XEP-0198 — Stream Management                        | Integrated | Enable/resume, bounded outbound tracking, acknowledgements, resend, and live cut/resume interoperability coverage               |
 | XEP-0199 — XMPP Ping                                | Integrated | Ping payload, automatic replies, and keepalive use                                                                              |
+| XEP-0206 — XMPP over BOSH                    | Integrated | Long-poll transport, session creation, stream restart, stanza flush, and terminate                                                             |
 | XEP-0203 — Delayed Delivery                         | API        | Message and presence delay payloads                                                                                             |
 | XEP-0297 — Stanza Forwarding                        | API        | Forwarded wrapper parsing/serialization                                                                                         |
 | XEP-0325 — IoT Control                              | Partial    | Control `set`, fields, `getForm`, and `setResponse` data models                                                                 |

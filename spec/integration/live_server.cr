@@ -5,6 +5,7 @@ private INTEGRATION_PORT            = (ENV["XMPP_INTEGRATION_PORT"]? || "55222")
 private INTEGRATION_COMPONENT_PORT  = (ENV["XMPP_INTEGRATION_COMPONENT_PORT"]? || "55535").to_i
 private INTEGRATION_CA              = ENV["XMPP_INTEGRATION_CA"]? || "docker/prosody/certs/ca.crt"
 private INTEGRATION_DIRECT_TLS_PORT = (ENV["XMPP_DIRECT_TLS_PORT"]? || "5223").to_i
+private INTEGRATION_HTTP_PORT       = (ENV["XMPP_INTEGRATION_HTTP_PORT"]? || "55280").to_i
 
 private class DisconnectingProxy
   getter port : Int32
@@ -190,6 +191,36 @@ private def direct_tls_config(log : IO) : XMPP::Config
   )
 end
 
+private def websocket_config(log : IO) : XMPP::Config
+  XMPP::Config.new(
+    host: INTEGRATION_HOST,
+    jid: "test@localhost/ws",
+    password: "test",
+    tls: true,
+    tls_ca_certificates: INTEGRATION_CA,
+    auto_presence: false,
+    io_timeout: 5,
+    log_file: log,
+    transport: XMPP::TransportMode::WebSocket,
+    url: "ws://#{INTEGRATION_HOST}:#{INTEGRATION_HTTP_PORT}/xmpp-websocket"
+  )
+end
+
+private def bosh_config(log : IO) : XMPP::Config
+  XMPP::Config.new(
+    host: INTEGRATION_HOST,
+    jid: "test@localhost/bosh",
+    password: "test",
+    tls: true,
+    tls_ca_certificates: INTEGRATION_CA,
+    auto_presence: false,
+    io_timeout: 5,
+    log_file: log,
+    transport: XMPP::TransportMode::Bosh,
+    url: "http://#{INTEGRATION_HOST}:#{INTEGRATION_HTTP_PORT}/http-bind"
+  )
+end
+
 private def connect_and_disconnect(config : XMPP::Config) : Array(XMPP::ConnectionState)
   states = [] of XMPP::ConnectionState
   client = XMPP::Client.new(config, XMPP::Router.new)
@@ -235,6 +266,11 @@ private def build_subscribe_iq(node : String, jid : String, to : String) : XMPP:
   iq
 end
 
+private def notification_title(event : XMPP::Stanza::PubSubEvent) : String?
+  return nil unless items = event.items
+  items.items.first?.try(&.tune).try(&.title)
+end
+
 describe "live Prosody interoperability" do
   it "authenticates and binds a server-assigned resource with XEP-0386" do
     wire = IO::Memory.new
@@ -252,6 +288,48 @@ describe "live Prosody interoperability" do
       transcript.should_not match(
         /SEND:\n<iq[^>]*>[\s\S]*?<bind xmlns=['"]urn:ietf:params:xml:ns:xmpp-bind['"]/
       )
+    ensure
+      client.disconnect
+    end
+  end
+
+  it "connects, authenticates, and round-trips a ping over WebSocket (RFC 7395)" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(websocket_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      client.bound_jid.should match(/\Atest@localhost\/ws~.+\z/)
+
+      ping = XMPP::Stanza::IQ.new
+      ping.type = "get"
+      ping.payload = XMPP::Stanza::Ping.new
+      client.request(ping).try(&.type).should eq "result"
+
+      transcript = wire.to_s
+      transcript.should_not contain("urn:ietf:params:xml:ns:xmpp-tls")
+      client.tls_version.should be_nil
+      client.cipher.should be_nil
+    ensure
+      client.disconnect
+    end
+  end
+
+  it "connects, authenticates, and round-trips a ping over BOSH (XEP-0206)" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(bosh_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      client.bound_jid.should match(/\Atest@localhost\/bosh~.+\z/)
+
+      ping = XMPP::Stanza::IQ.new
+      ping.type = "get"
+      ping.payload = XMPP::Stanza::Ping.new
+      client.request(ping).try(&.type).should eq "result"
+
+      transcript = wire.to_s
+      transcript.should_not contain("urn:ietf:params:xml:ns:xmpp-tls")
     ensure
       client.disconnect
     end
@@ -520,7 +598,9 @@ describe "live Prosody interoperability" do
       ), router}
     end
 
-    event_received = Channel(XMPP::Stanza::PubSubEvent).new
+    # Buffered so an early notification cannot stall the subscriber's receive
+    # fiber (a blocking send there would starve reading IQ responses).
+    event_received = Channel(XMPP::Stanza::PubSubEvent).new(16)
     subscriber_router.message do |_sender, packet|
       next unless packet.is_a?(XMPP::Stanza::Message)
       message = packet.as(XMPP::Stanza::Message)
@@ -530,41 +610,14 @@ describe "live Prosody interoperability" do
       end
     end
 
-    # Auto-approve presence subscription requests so PEP delivery is permitted.
-    subscriber_router.presence do |_sender, packet|
-      presence = packet.as(XMPP::Stanza::Presence)
-      next unless presence.type == "subscribe"
-      approval = XMPP::Stanza::Presence.new
-      approval.type = "subscribed"
-      approval.to = presence.from
-      subscriber.send approval
-    end
-    publisher_router.presence do |_sender, packet|
-      presence = packet.as(XMPP::Stanza::Presence)
-      next unless presence.type == "subscribe"
-      approval = XMPP::Stanza::Presence.new
-      approval.type = "subscribed"
-      approval.to = presence.from
-      publisher.send approval
-    end
-
     begin
       subscriber.connect
       publisher.connect
 
-      # Establish mutual presence so the PEP access model permits delivery.
+      # Broadcast availability from both resources.
       subscriber.send XMPP::Stanza::Presence.new
       publisher.send XMPP::Stanza::Presence.new
-      sleep 100.milliseconds
-      subscribe_presence = XMPP::Stanza::Presence.new
-      subscribe_presence.type = "subscribe"
-      subscribe_presence.to = "test@localhost"
-      subscriber.send subscribe_presence
-      subscribe_presence2 = XMPP::Stanza::Presence.new
-      subscribe_presence2.type = "subscribe"
-      subscribe_presence2.to = "test@localhost"
-      publisher.send subscribe_presence2
-      sleep 500.milliseconds
+      sleep 200.milliseconds
 
       # Publisher creates the node implicitly by publishing.
       publisher.request(build_publish_iq(node, "Hey Jude", "test@localhost")).try(&.type).should eq "result"
@@ -575,15 +628,27 @@ describe "live Prosody interoperability" do
       # Publish again; the subscriber must receive a notification.
       publisher.request(build_publish_iq(node, "Paperback Writer", "test@localhost")).try(&.type).should eq "result"
 
-      select
-      when event = event_received.receive
-        items = event.items
-        items.should_not be_nil
-        items.not_nil!.node.should eq node
-        event.items.not_nil!.items.first.id.should eq "current"
-      when timeout(5.seconds)
-        fail "timed out waiting for PEP notification"
+      # The first publish's notification is delivered to this same-account
+      # resource before it subscribes; keep receiving until the notification
+      # carrying the newly published item arrives.
+      event = nil
+      deadline = Time.instant + 5.seconds
+      while (remaining = deadline - Time.instant) > Time::Span.zero
+        select
+        when received = event_received.receive
+          if notification_title(received) == "Paperback Writer"
+            event = received
+            break
+          end
+        when timeout(remaining)
+          break
+        end
       end
+
+      event.should_not be_nil
+      items = event.not_nil!.items
+      items.should_not be_nil
+      items.not_nil!.node.should eq node
     ensure
       subscriber.disconnect
       publisher.disconnect

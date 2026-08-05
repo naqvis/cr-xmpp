@@ -1,3 +1,5 @@
+require "./transport/transport"
+
 module XMPP
   # Mediated Read/Write on socket
   # Used if logFile from Config is not nil
@@ -8,8 +10,12 @@ module XMPP
     getter tls_socket : OpenSSL::SSL::Socket::Client?
 
     def initialize(@socket, @log_file = nil)
-      # Track TLS socket for channel binding support
-      @tls_socket = @socket.is_a?(OpenSSL::SSL::Socket::Client) ? @socket.as(OpenSSL::SSL::Socket::Client) : nil
+      # Track TLS socket for channel binding support.
+      @tls_socket = if @socket.is_a?(OpenSSL::SSL::Socket::Client)
+                      @socket.as(OpenSSL::SSL::Socket::Client)
+                    elsif @socket.is_a?(Transport)
+                      @socket.as(Transport).tls_socket
+                    end
     end
 
     def read(slice : Bytes)

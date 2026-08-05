@@ -4,6 +4,7 @@ require "./event_manager"
 require "./stream_management"
 require "./connection"
 require "./tls"
+require "./transport/transport"
 
 module XMPP
   private class ClientConnection
@@ -77,12 +78,9 @@ module XMPP
     @config : Config
     # Session gathers data that be access by users of this Shard
     getter session : Session
-    # TCP level connection / can be replaced by a TLS session after starttls
-    {% if flag?(:without_openssl) %}
-      @socket : TCPSocket | Nil
-    {% else %}
-      @socket : TCPSocket | OpenSSL::SSL::Socket | Nil
-    {% end %}
+    # Active transport (TCP, WebSocket, or BOSH). TLS handling lives inside
+    # the transport; Session negotiates STARTTLS on top when appropriate.
+    @socket : Transport | Nil
 
     # Router is used to dispatch packets
     @router : Router
@@ -134,23 +132,22 @@ module XMPP
       begin
         update_state ConnectionState::Connecting
         ensure_connect_not_cancelled
-        socket = nil.as(TCPSocket?)
         connection = nil.as(ClientConnection?)
 
-        io, socket, tls_socket = open_socket
+        transport = Transport.connect(@config)
         @connection_mutex.synchronize do
           raise ConnectionError.new("connection attempt was cancelled") if @connect_cancelled
-          @socket = socket
+          @socket = transport
         end
         update_state ConnectionState::Connected
         ensure_connect_not_cancelled
 
         # Client is ok, we now open XMPP session
-        session = Session.new(io, @config, state)
+        session = Session.new(transport, @config, state, encrypted: transport.encrypted?)
         ensure_connect_not_cancelled
         @session = session
         @supports_ping = session.supports_ping
-        connection = ClientConnection.new(io, session, session.sm_state)
+        connection = ClientConnection.new(transport, session, session.sm_state)
         @connection_mutex.synchronize { @connection = connection }
 
         # Enable stream management tracking if SM is active
@@ -177,7 +174,7 @@ module XMPP
         spawn { recv(connection) }
         update_state ConnectionState::SessionEstablished
       rescue ex
-        cleanup_failed_connect(connection, socket, tls_socket)
+        cleanup_failed_connect(connection, @connection_mutex.synchronize { @socket })
         raise ex
       ensure
         @connection_mutex.synchronize { @connecting = false }
@@ -401,33 +398,6 @@ module XMPP
       end
     end
 
-    # Try each resolved endpoint in order (XEP-0368 prefers direct TLS, then
-    # STARTTLS SRV records, falling back to the configured host). Returns the
-    # connected IO (possibly TLS-wrapped) plus the raw TCP socket for tracking.
-    private def open_socket : {IO, TCPSocket, OpenSSL::SSL::Socket::Client?}
-      endpoints = ConnectionResolver.resolve(@config)
-      last_error = nil.as(Exception?)
-      endpoints.each do |endpoint|
-        begin
-          tcp = TCPSocket.new(endpoint.host, endpoint.port, connect_timeout: @config.connect_timeout)
-          tcp.tcp_keepalive_interval = 30
-          tcp.read_timeout = @config.io_timeout.seconds
-          tcp.write_timeout = @config.io_timeout.seconds
-          tcp.sync = true
-          if endpoint.mode.direct_tls?
-            # XEP-0368: wrap immediately; no plaintext stream bytes are sent.
-            tls = TLSConnection.wrap(tcp, @config, endpoint.host)
-            return {tls, tcp, tls}
-          end
-          return {tcp, tcp, nil}
-        rescue ex
-          Logger.warn "Connection to #{endpoint.host}:#{endpoint.port} failed: #{ex.message}"
-          last_error = ex
-        end
-      end
-      raise ConnectionError.new("unable to connect to any XMPP endpoint#{last_error ? ": #{last_error.message}" : ""}")
-    end
-
     # TLS introspection (RFC 7590 §3.6). Delegate to the active session.
     def tls_version : String?
       @session.tls_version
@@ -441,9 +411,8 @@ module XMPP
       @session.tls_verified?
     end
 
-    private def cleanup_failed_connect(connection : ClientConnection?, socket : TCPSocket?, tls_socket : OpenSSL::SSL::Socket::Client? = nil)
+    private def cleanup_failed_connect(connection : ClientConnection?, socket : Transport? = nil)
       connection.try &.request_stop(intentional: true)
-      tls_socket.try { |open_tls| open_tls.close unless open_tls.closed? }
       socket.try { |open_socket| open_socket.close unless open_socket.closed? }
       @connection_mutex.synchronize do
         @connection = nil if connection && @connection.try(&.same?(connection))

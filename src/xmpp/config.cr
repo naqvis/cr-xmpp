@@ -2,6 +2,16 @@ require "./jid"
 require "./auth"
 
 module XMPP
+  # Connection transport selected by `Config#transport`. `Tcp` is the classic
+  # RFC 6120 stream (STARTTLS or XEP-0368 direct TLS); `WebSocket` is RFC 7395;
+  # `Bosh` is XEP-0206; `Auto` tries TCP first, then XEP-0156 discovery.
+  enum TransportMode
+    Tcp
+    WebSocket
+    Bosh
+    Auto
+  end
+
   struct Config
     getter jid : String
     getter password : String
@@ -33,12 +43,20 @@ module XMPP
     # _xmpps-client/_xmpp-client SRV records and connects using direct TLS
     # where the server offers it. Defaults to false (STARTTLS on port 5222).
     getter? prefer_direct_tls : Bool
+    # Connection transport: TransportMode::Tcp (default), WebSocket (RFC 7395),
+    # Bosh (XEP-0206), or Auto (TCP first, then XEP-0156 discovery).
+    getter transport : TransportMode
+    # Explicit connection endpoint for the WebSocket (RFC 7395) or BOSH
+    # (XEP-0206) transports: ws:// or wss:// for WebSocket, http:// or https://
+    # for BOSH. Overrides discovery; falls back to a derived default when nil.
+    getter url : String?
 
     def initialize(@jid, @password, @host, @port = 5222, @lang = "en", @tls = true,
                    @skip_cert_verify = false, time_out = 15, @log_file = nil,
                    @sasl_auth_order = SASL_AUTH_ORDER, @auto_presence = true,
                    @io_timeout = 30, @max_stanza_size = XMLStreamReader::DEFAULT_MAX_ELEMENT_SIZE,
-                   @tls_ca_certificates = nil, @prefer_direct_tls = false)
+                   @tls_ca_certificates = nil, @prefer_direct_tls = false,
+                   @transport = TransportMode::Tcp, @url = nil)
       raise ConfigurationError.new("missing password") if @password.blank?
       raise ConfigurationError.new("time_out must be positive") unless time_out > 0
       raise ConfigurationError.new("io_timeout must be positive") unless @io_timeout > 0

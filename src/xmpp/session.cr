@@ -4,6 +4,7 @@ require "./config"
 require "./auth"
 require "./stanza"
 require "./tls"
+require "./transport/transport"
 
 module XMPP
   class Session
@@ -60,7 +61,7 @@ module XMPP
       @skip_cert_verify = false
     end
 
-    def initialize(io, config : Config, @sm_state)
+    def initialize(io, config : Config, @sm_state, encrypted : Bool = false)
       @connected = !io.closed?
       @bind_jid = ""
       @stream_id = ""
@@ -72,22 +73,30 @@ module XMPP
       @stream_reader = XMLStreamReader.new(@stream_logger, config.max_stanza_size)
 
       # XEP-0368: a client-side pre-wrapped TLS socket means direct TLS, so
-      # STARTTLS MUST NOT be negotiated. The stream opens directly on it.
-      direct_tls = io.is_a?(OpenSSL::SSL::Socket::Client)
-      @tls_enabled = direct_tls
+      # STARTTLS MUST NOT be negotiated. WebSocket/BOSH transports already
+      # carry TLS (or handle it themselves), so they must not STARTTLS either.
+      direct_tls = if io.is_a?(Transport)
+                     !io.tls_socket.nil?
+                   else
+                     io.is_a?(OpenSSL::SSL::Socket::Client)
+                   end
+      @tls_enabled = encrypted || direct_tls
       @skip_cert_verify = config.skip_cert_verify?
       tls_conn = io
 
       @features = open config.parsed_jid.domain
 
-      unless direct_tls
+      unless encrypted || direct_tls
         if @features.tls_required && !config.tls?
           raise TLSUnavailableError.new("Server requires TLS but TLS is disabled in the client configuration")
         end
 
         # RFC 7590 §3.1 anti-stripping: attempt STARTTLS even when the server
         # does not advertise it. Only a real negotiation failure aborts.
-        if config.tls?
+        # WebSocket/BOSH transports have no STARTTLS upgrade, so skip the
+        # attempt entirely on them.
+        starttls_eligible = io.is_a?(Transport) ? io.supports_starttls? : true
+        if config.tls? && starttls_eligible
           tls_conn = start_tls_if_supported io, config
           if tls_conn.is_a?(IO::Buffered)
             tls_conn.sync = false
@@ -334,7 +343,20 @@ module XMPP
       # and its ordinary send tracker are not running yet.
       @sm_state.queue_stanza(xml) if stream_managed
       send xml
-      iq = Stanza::IQ.new read_resp
+      # The server may interleave stream-management acknowledgement nonzas
+      # (<a/>/<r/>) before the result (observed on WebSocket, where the peer
+      # acks the discovery request in its own frame); skip them.
+      iq = loop do
+        packet = Stanza::Parser.next_packet read_resp
+        case packet
+        when Stanza::IQ
+          break packet.as(Stanza::IQ)
+        when Stanza::SMAnswer, Stanza::SMRequest
+          next
+        else
+          raise ProtocolError.new("expected disco IQ result, got #{packet.class}: #{packet.name}")
+        end
+      end
       if stream_managed
         @sm_state.inbound &+= 1_u32
         # Receiving the correlated IQ result proves that the server handled

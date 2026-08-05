@@ -48,6 +48,15 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
 - Added XEP-0352 client state indication via `XMPP::ClientStateIndication`.
 - Added XEP-0357 push notification enable/disable and discovery via
   `XMPP::Push`.
+- Implemented RFC 7395 XMPP over WebSocket and XEP-0206 XMPP over BOSH behind a
+  common transport abstraction selected with `Config#transport`
+  (`TransportMode::WebSocket` / `TransportMode::Bosh`), including WebSocket
+  PING keepalives and BOSH session creation, stream restart, stanza flushing,
+  and session termination.
+- Implemented XEP-0156 alternative-connection discovery from the HTTPS
+  host-meta document (XRD/JRD) and a `TransportMode::Auto` mode that tries the
+  classic RFC 6120 TCP path first and then falls back to discovered
+  WebSocket/BOSH endpoints.
 
 ### Security
 
@@ -72,6 +81,8 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
   digest-pinned Prosody 13 image.
 - Added live abrupt-transport XEP-0198 resumption and real XEP-0114 component
   authentication/failure coverage.
+- Added live WebSocket (RFC 7395) and BOSH (XEP-0206) round-trip coverage
+  against Prosody alongside the existing TLS/SASL interoperability tests.
 - Consolidated development and integration onto one canonical
   `docker-compose.yml`; integration runs under an isolated Compose project and
   volume.
@@ -90,6 +101,8 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
 - Documented the secure SASL defaults and legacy compatibility opt-in.
 - Documented lifecycle states, concurrency guarantees, typed errors, local
   validation, and custom CA configuration.
+- Documented WebSocket (RFC 7395), BOSH (XEP-0206), and alternative-connection
+  discovery (XEP-0156) in the protocol support matrix and DOAP file.
 
 ## Earlier development history
 

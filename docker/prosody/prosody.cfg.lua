@@ -3,6 +3,7 @@ admins = {}
 plugin_paths = { "/usr/local/lib/prosody/site-modules" }
 
 modules_enabled = {
+    "bosh";
     "cloud_notify";
     "csi";
     "disco";
@@ -14,6 +15,7 @@ modules_enabled = {
     "saslauth";
     "smacks";
     "tls";
+    "websocket";
 }
 
 allow_registration = false
@@ -27,8 +29,15 @@ c2s_ports = { 5222 }
 c2s_direct_tls_ports = { 5223 }
 component_ports = { 5347 }
 
+http_ports = { 5280 }
+http_interfaces = { "*" }
+cross_domain_websocket = true
+consider_websocket_secure = true
+consider_bosh_secure = true
+
 log = {
     info = "*console";
+    debug = "*console";
 }
 
 ssl = {
