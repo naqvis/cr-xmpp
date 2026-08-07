@@ -247,6 +247,40 @@ client.on("message") do |s, p|
 end
 ```
 
+## High-level helpers
+
+Beyond PEP, the library ships typed clients for common server-side features.
+Each takes an `XMPP::Client` and performs the full stanza exchange:
+
+- `XMPP::VCard` — XEP-0054 vCard fetch/set on the bare JID.
+- `XMPP::PrivateXmlStorage` — XEP-0049 `jabber:iq:private` retrieve/store.
+- `XMPP::Blocking` — XEP-0191 blocklist management (`block`, `unblock`,
+  `list`, `supported?`).
+- `XMPP::Carbons` — XEP-0280 message carbons enable/disable and forwarding.
+- `XMPP::Me` / `XMPP::DirectInvitation` — XEP-0245 `/me` and XEP-0249 direct
+  MUC invites.
+- `XMPP::HTTPUpload` — XEP-0363 slot request plus HTTPS PUT upload.
+- `XMPP::Bookmarks` / `XMPP::UserAvatar` — XEP-0048/0402 bookmarks and
+  XEP-0084/0398 avatars over PEP.
+- `XMPP::MessageCorrection` — XEP-0308 last-message correction.
+- `XMPP::MessageArchives` — XEP-0313 MAM queries with RSM paging and
+  `with`/`since`/`until` filters.
+- `XMPP::Jingle` — XEP-0234/0261 file-transfer and in-band-bytestream
+  offer/accept construction.
+
+```crystal
+vcard = XMPP::VCard.new(client)
+card = vcard.fetch                       # => Stanza::VCard? for the bare JID
+card.fn = "Juliet Capulet"
+vcard.set(card)
+
+archives = XMPP::MessageArchives.new(client)
+archives.query(with_jid: "romeo@montague.lit", limit: 10)   # => Stanza::MAMFin?
+```
+
+Incoming `Stanza::MAMResult` messages carry each archived item as a forwarded
+message. See [PROTOCOL.md](PROTOCOL.md) for the exact scope of each feature.
+
 ## Lifecycle and concurrency
 
 `current_state` reports:

@@ -700,4 +700,162 @@ describe "live Prosody interoperability" do
       client.disconnect
     end
   end
+
+  it "stores and retrieves a vCard" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(integration_config(wire), XMPP::Router.new)
+
+    begin
+      client.connect
+      vcard = XMPP::VCard.new(client)
+
+      card = XMPP::Stanza::VCard.new
+      card.fn = "Juliet Capulet"
+      vcard.set(card).try(&.type).should eq "result"
+
+      fetched = vcard.fetch
+      fetched.should_not be_nil
+      fetched.not_nil!.fn.should eq "Juliet Capulet"
+    ensure
+      client.disconnect
+    end
+  end
+
+  it "delivers a carbon copy of a message sent from another resource" do
+    a_router = XMPP::Router.new
+    a_wire = IO::Memory.new
+    a = XMPP::Client.new(integration_config(a_wire, jid: "test@localhost/carbons-a"), a_router)
+    b_wire = IO::Memory.new
+    b = XMPP::Client.new(integration_config(b_wire, jid: "test@localhost/carbons-b"), XMPP::Router.new)
+
+    carbon_received = Channel(XMPP::Stanza::CarbonSent).new(16)
+    a_router.message do |_sender, packet|
+      next unless packet.is_a?(XMPP::Stanza::Message)
+      message = packet.as(XMPP::Stanza::Message)
+      if extension = message.get(XMPP::Stanza::CarbonSent)
+        carbon_received.send(extension.as(XMPP::Stanza::CarbonSent)) unless carbon_received.closed?
+      end
+    end
+
+    begin
+      a.connect
+      b.connect
+      a.send XMPP::Stanza::Presence.new
+      b.send XMPP::Stanza::Presence.new
+      sleep 200.milliseconds
+
+      XMPP::Carbons.new(a).supported?.should be_true
+      XMPP::Carbons.new(a).enable.try(&.type).should eq "result"
+
+      original = XMPP::Stanza::Message.new
+      original.type = "chat"
+      original.to = "carlos@localhost"
+      original.body = "Hello, world"
+      b.send original
+
+      carbon = receive_with_timeout(carbon_received, "carbon copy")
+      forwarded = carbon.forwarded.should_not be_nil
+      stanza = forwarded.not_nil!.stanza
+      stanza.should be_a(XMPP::Stanza::Message)
+      stanza.as(XMPP::Stanza::Message).body.should eq "Hello, world"
+    ensure
+      a.disconnect
+      b.disconnect
+    end
+  end
+
+  it "delivers a direct MUC invitation payload" do
+    a_wire = IO::Memory.new
+    a = XMPP::Client.new(integration_config(a_wire, jid: "test@localhost/invite-a"), XMPP::Router.new)
+    b_router = XMPP::Router.new
+    b_wire = IO::Memory.new
+    b = XMPP::Client.new(integration_config(b_wire, jid: "test@localhost/invite-b"), b_router)
+
+    invite_received = Channel(XMPP::Stanza::DirectInvite).new(4)
+    b_router.message do |_sender, packet|
+      next unless packet.is_a?(XMPP::Stanza::Message)
+      message = packet.as(XMPP::Stanza::Message)
+      if extension = message.get(XMPP::Stanza::DirectInvite)
+        invite_received.send(extension.as(XMPP::Stanza::DirectInvite)) unless invite_received.closed?
+      end
+    end
+
+    begin
+      a.connect
+      b.connect
+      a.send XMPP::Stanza::Presence.new
+      b.send XMPP::Stanza::Presence.new
+      sleep 200.milliseconds
+
+      XMPP::DirectInvitation.new(a).invite(
+        to: b.bound_jid,
+        jid: "coven@chat.shakespeare.lit",
+        reason: "Hey!"
+      )
+
+      invite = receive_with_timeout(invite_received, "direct invite")
+      invite.jid.should eq "coven@chat.shakespeare.lit"
+      invite.reason.should eq "Hey!"
+      invite.thread.should eq ""
+    ensure
+      a.disconnect
+      b.disconnect
+    end
+  end
+
+  it "uploads and retrieves a file via XEP-0363 HTTP File Upload" do
+    wire = IO::Memory.new
+    client = XMPP::Client.new(
+      integration_config(wire, jid: "test@localhost/http-upload"),
+      XMPP::Router.new
+    )
+
+    begin
+      client.connect
+      uploader = XMPP::HTTPUpload.new(client, "upload.localhost")
+
+      uploader.supported?.should be_true
+
+      content = "hello world"
+      slot = uploader.request_slot("hello.txt", content.bytesize.to_u64, "text/plain")
+      slot.should_not be_nil
+      slot = slot.not_nil!
+      slot.put_url.should contain("/file_share/")
+      slot.get_url.should contain("/file_share/")
+
+      # Prosody 13 serves mod_http_file_share routes on the component's vhost,
+      # while the advertised URLs point at upload.localhost:5281 (HTTPS, not
+      # mapped in the test harness). Rebase onto the exposed HTTP port and keep
+      # the vhost via the Host header so the routes still match.
+      rebase = ->(url : String) do
+        uri = URI.parse(url)
+        uri.scheme = "http"
+        uri.host = "127.0.0.1"
+        uri.port = INTEGRATION_HTTP_PORT
+        uri.to_s
+      end
+      vhost = URI.parse(slot.put_url).host.not_nil!
+
+      http = HTTP::Client.new("127.0.0.1", INTEGRATION_HTTP_PORT)
+      begin
+        headers = HTTP::Headers.new
+        headers["Host"] = vhost
+        slot.put_headers.each { |header| headers[header.name] = header.value }
+        headers["Content-Type"] = "text/plain"
+
+        put_target = URI.parse(rebase.call(slot.put_url)).request_target
+        put_response = http.put(put_target, headers: headers, body: content)
+        put_response.status_code.should eq 201
+
+        get_target = URI.parse(rebase.call(slot.get_url)).request_target
+        get_response = http.get(get_target, headers: HTTP::Headers{"Host" => vhost})
+        get_response.status_code.should eq 200
+        get_response.body.should eq content
+      ensure
+        http.close
+      end
+    ensure
+      client.disconnect
+    end
+  end
 end

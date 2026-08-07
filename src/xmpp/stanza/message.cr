@@ -99,6 +99,26 @@ module XMPP::Stanza
       extensions.find &.class.<=(type)
     end
 
+    # me? reports whether the message body is a /me command per XEP-0245.
+    # A body is considered a /me command when it starts with the exact,
+    # case-sensitive string "/me " followed by some content.
+    def me? : Bool
+      body.starts_with?("/me ")
+    end
+
+    # me_body returns the message body with the leading "/me " prefix removed.
+    # When the body is not a /me command the original body is returned.
+    def me_body : String
+      body.starts_with?("/me ") ? body.lchop("/me ") : body
+    end
+
+    # me_display formats a /me message body for presentation per XEP-0245,
+    # substituting the speaker's identity for the "/me " prefix:
+    #   message.me_display("Juliet")  # => "* Juliet dances a jig"
+    def me_display(identity : String) : String
+      "* #{identity} #{me_body}"
+    end
+
     def xmpp_format
       msg = XML.build(indent: "", quote_char: '"') do |xml|
         to_xml xml

@@ -4,17 +4,21 @@ plugin_paths = { "/usr/local/lib/prosody/site-modules" }
 
 modules_enabled = {
     "bosh";
+    "carbons";
     "cloud_notify";
     "csi";
     "disco";
     "ping";
     "pubsub";
     "pep";
+    "ping";
+    "private";
     "sasl2";
     "sasl2_bind2";
     "saslauth";
     "smacks";
     "tls";
+    "vcard";
     "websocket";
 }
 
@@ -60,3 +64,9 @@ VirtualHost "localhost"
 
 Component "component.localhost"
     component_secret = "component-secret"
+
+Component "conference.localhost" "muc"
+    restrict_room_creation = "local"
+
+Component "upload.localhost" "http_file_share"
+    http_file_share_size_limit = 10485760

@@ -57,6 +57,28 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
   host-meta document (XRD/JRD) and a `TransportMode::Auto` mode that tries the
   classic RFC 6120 TCP path first and then falls back to discovered
   WebSocket/BOSH endpoints.
+- Added XEP-0054 vCard fetch/set against the bare JID via `XMPP::VCard`, and
+  XEP-0153 vCard-based avatar presence updates.
+- Added XEP-0049 private XML storage (`jabber:iq:private`) via
+  `XMPP::PrivateXmlStorage`.
+- Added XEP-0191 blocking command via `XMPP::Blocking` with a disco-based
+  `supported?` probe.
+- Added XEP-0280 message carbons via `XMPP::Carbons`, including sent/received
+  forwarding around `Stanza::Forwarded` and a domain-based support probe.
+- Added XEP-0245 `/me` command detection via `XMPP::Me` and XEP-0249 direct MUC
+  invitations via `XMPP::DirectInvitation`.
+- Added XEP-0363 HTTP file upload via `XMPP::HTTPUpload` (slot request/response
+  and HTTPS PUT).
+- Added XEP-0048/XEP-0402 bookmarks and XEP-0084/XEP-0398 user avatars as PEP
+  payloads via `XMPP::Bookmarks` and `XMPP::UserAvatar`, plus XEP-0223
+  presence-form PEP notifications via `XMPP::PEPNotifications`.
+- Added XEP-0308 last message correction via `XMPP::MessageCorrection`.
+- Added XEP-0313 message archive management via `XMPP::MessageArchives` with
+  RSM paging and `with`/`since`/`until` filters.
+- Added XEP-0410 pubsub publish options via a jabber:x:data form on publish
+  (`XMPP::PEP#publish_with_options`).
+- Added XEP-0234 jingle file transfer and XEP-0261 in-band bytestream
+  descriptions with offer/accept construction via `XMPP::Jingle`.
 
 ### Security
 
@@ -83,6 +105,9 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
   authentication/failure coverage.
 - Added live WebSocket (RFC 7395) and BOSH (XEP-0206) round-trip coverage
   against Prosody alongside the existing TLS/SASL interoperability tests.
+- Added live Prosody coverage for vCard fetch/set, two-resource carbons,
+  direct MUC invitations, XEP-0363 HTTP file upload, and XEP-0049 private XML
+  storage.
 - Consolidated development and integration onto one canonical
   `docker-compose.yml`; integration runs under an isolated Compose project and
   volume.
@@ -103,6 +128,9 @@ belong in [`PROTOCOL.md`](PROTOCOL.md).
   validation, and custom CA configuration.
 - Documented WebSocket (RFC 7395), BOSH (XEP-0206), and alternative-connection
   discovery (XEP-0156) in the protocol support matrix and DOAP file.
+- Added the messaging, storage, carbons, avatar, and file-transfer XEPs
+  (0054, 0048, 0049, 0084, 0191, 0223, 0234, 0245, 0249, 0261, 0280, 0308,
+  0313, 0363, 0398, 0402, 0410) to the protocol support matrix and DOAP file.
 
 ## Earlier development history
 

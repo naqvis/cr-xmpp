@@ -36,6 +36,18 @@ module XMPP
       @client.send build_iq("set", pubsub, to: nil)
     end
 
+    # publish_with_options sends an item together with a publish-options form
+    # (XEP-0410), configuring the node (e.g. its access model) at publish time.
+    def publish_with_options(node : String, item : Stanza::Item, options : Stanza::PublishOptions)
+      pubsub = Stanza::PubSub.new
+      publish = Stanza::Publish.new
+      publish.node = node
+      publish.item = item
+      pubsub.publish = publish
+      pubsub.publish_options = options
+      @client.send build_iq("set", pubsub, to: nil)
+    end
+
     # subscribe subscribes the client to a node owned by the given bare JID.
     def subscribe(jid : String, node : String)
       pubsub = Stanza::PubSub.new

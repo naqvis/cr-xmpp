@@ -17,6 +17,9 @@ module XMPP::Stanza
       raise "Invalid node(#{node.name}, expecting #{cls.xml_name}" unless (node.namespace.try &.href == cls.xml_name.space) &&
                                                                           (node.name == cls.xml_name.local)
       node.children.select(&.element?).each do |child|
+        # Only the wrapped stanza is decoded; auxiliary elements such as
+        # <delay/> are parsed as part of that stanza by its own constructor.
+        next unless %w(message presence iq).includes?(child.name)
         obj = Parser.decode_client(child)
         cls.stanza = obj if obj.is_a?(Packet)
         break
