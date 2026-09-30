@@ -167,7 +167,7 @@ module XMPP
         # Send initial presence if auto_presence is enabled (default: true)
         # Users can disable this to manually control presence (e.g., for invisible login)
         if @config.auto_presence?
-          write_to(connection, "<presence xml:lang='en'/>", track: false)
+          write_to(connection, "<presence xml:lang='en'/>", track: true)
         end
 
         spawn { keepalive(connection) }
